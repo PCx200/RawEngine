@@ -4,6 +4,8 @@
 
 #ifndef RAWENGINE_CAMERA_H
 #define RAWENGINE_CAMERA_H
+#include <GLFW/glfw3.h>
+
 #include "Transform.h"
 
 
@@ -23,6 +25,10 @@ public:
     glm::mat4 getViewMatrix() const;
 
     glm::mat4 getProjectionMatrix() const;
+
+    void ProcessMovementInput(GLFWwindow *window, float deltaTime, float speed);
+
+    void ProcessMouseInput(GLFWwindow *window, float deltaTime, float speed);
 
 
 };

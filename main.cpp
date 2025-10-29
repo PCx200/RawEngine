@@ -40,24 +40,7 @@ void processInput(GLFWwindow *window) {
 
     if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
         glfwSetWindowShouldClose(window, true);
-    //forward
-    if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
-        camera.transform.Translate(glm::vec3(0.0f, 0.0f, -0.001f));
-    //backward
-    if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
-        camera.transform.Translate(glm::vec3(0.0f, 0.0f, 0.001f));
-    //right
-    if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
-        camera.transform.Translate(glm::vec3(0.001f, 0.0f, 0.0f));
-    //left
-    if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS)
-        camera.transform.Translate(glm::vec3(-0.001f, 0.0f, 0.0f));
-    //up
-    if (glfwGetKey(window, GLFW_KEY_UP) == GLFW_PRESS)
-        camera.transform.Translate(glm::vec3(0.0f, 0.001f, 0.0f));
-    //down
-    if (glfwGetKey(window, GLFW_KEY_DOWN) == GLFW_PRESS)
-        camera.transform.Translate(glm::vec3(0.0f, -0.001f, 0.0f));
+
 }
 
 void framebufferSizeCallback(GLFWwindow *window,
@@ -194,10 +177,19 @@ int main() {
     double finishFrameTime = 0.0;
     float deltaTime = 0.0f;
     float rotationStrength = 1000.0f;
+    float cameraSpeed = 1.0f;
+    float cameraRotationSpeed = 20.0f;
+    float cameraFOV = 45.0f;
+
+
     while (!glfwWindowShouldClose(window)) {
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-        //camera.transform.Rotate(glm::vec3(0.0f, 1.0f, 0.0f), glm::radians(rotationStrength) * deltaTime);
+        camera.ProcessMovementInput(window, deltaTime, cameraSpeed);
+        camera.ProcessMouseInput(window,deltaTime, cameraRotationSpeed);
+        camera.fov = cameraFOV;
+
+        //camera.transform.Rotate(glm::vec3(0.0f, 1.0f, 0.0f), 5 * deltaTime);
         //camera.transform.position -=   glm::vec3(0,0.003,0);
         //VP
         glm::mat4 view = camera.getViewMatrix();
@@ -206,10 +198,20 @@ int main() {
         ImGui_ImplOpenGL3_NewFrame();
         ImGui_ImplGlfw_NewFrame();
         ImGui::NewFrame();
+
         ImGui::Begin("Raw Engine v2");
         ImGui::Button("Change Scene");
         ImGui::Text("Hello :)");
         ImGui::End();
+
+        ImGui::Begin("Camera Settings");
+        ImGui::SliderFloat("Camera Speed", &cameraSpeed, 1.0f, 5.0f);
+        ImGui::SliderFloat("Camera Rotation Speed", &cameraRotationSpeed, 1.0f, 50.0f);
+        ImGui::SliderFloat("Camera FOV", &cameraFOV, 20.0f, 120.0f);
+        ImGui::End();
+
+        ImGui::Render();
+        ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 
         processInput(window);
 

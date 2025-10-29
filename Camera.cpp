@@ -24,4 +24,48 @@ glm::mat4 Camera::getProjectionMatrix() const {
     return glm::perspective(glm::radians(fov), aspect, nearPlane, farPlane);
 }
 
+void Camera::ProcessMovementInput(GLFWwindow *window, float deltaTime, float speed) {
+
+    glm::vec3 direction(0.0f);
+
+    //forward
+    if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
+        direction += transform.forward();
+    //backward
+    if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
+        direction -= transform.forward();
+    //right
+    if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
+        direction += transform.right();
+    //left
+    if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS)
+        direction -= transform.right();
+    //up
+    if (glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS)
+        direction += transform.up();
+    //down
+    if (glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS)
+        direction -= transform.up();
+
+    if (glm::length(direction) > 0.0f)
+        direction = glm::normalize(direction);
+    transform.Translate(direction * speed * deltaTime);
+}
+
+void Camera::ProcessMouseInput(GLFWwindow *window, float deltaTime, float speed) {
+
+    // if (glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_RIGHT) == GLFW_PRESS)
+    //     transform.Rotate(transform.up(), speed * deltaTime);
+    // if (glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS)
+    //     transform.Rotate(transform.up(), -speed * deltaTime);
+    if (glfwGetKey(window, GLFW_KEY_RIGHT) == GLFW_PRESS)
+        transform.Rotate(transform.up(), speed * deltaTime);
+    if (glfwGetKey(window, GLFW_KEY_LEFT) == GLFW_PRESS)
+        transform.Rotate(transform.up(), -speed * deltaTime);
+    if (glfwGetKey(window, GLFW_KEY_UP) == GLFW_PRESS)
+        transform.Rotate(transform.right(), speed * deltaTime);
+    if (glfwGetKey(window, GLFW_KEY_DOWN) == GLFW_PRESS)
+        transform.Rotate(transform.right(), -speed * deltaTime);
+}
+
 
