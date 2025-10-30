@@ -18,6 +18,8 @@ public:
 
     GameObject(const core::Model& model, GLuint shaderProgram);
 
+    void Update(float deltaTime);
+
     void Render(const glm::mat4& viewProj);
 
 };

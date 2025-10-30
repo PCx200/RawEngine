@@ -3,3 +3,25 @@
 //
 
 #include "SceneManager.h"
+
+SceneManager::SceneManager() {
+
+}
+
+void SceneManager::AddScene(Scene *scene) {
+    scenes.push_back(scene);
+}
+
+Scene* SceneManager::getCurrentScene() const{
+    return scenes[currentScene];
+}
+
+void SceneManager::NextScene() {
+    currentScene = (currentScene + 1) % scenes.size();
+}
+
+void SceneManager::PreviousScene() {
+    currentScene = (currentScene - 1) % scenes.size();
+}
+
+

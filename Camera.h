@@ -4,6 +4,7 @@
 
 #ifndef RAWENGINE_CAMERA_H
 #define RAWENGINE_CAMERA_H
+#include <glad/glad.h>
 #include <GLFW/glfw3.h>
 
 #include "Transform.h"

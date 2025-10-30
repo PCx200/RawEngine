@@ -10,10 +10,21 @@
 
 
 class SceneManager {
+private:
+    std::vector<Scene*> scenes;
+    int currentScene = 0;
+public:
+    SceneManager();
 
-    int sceneCount;
-    int currentScene;
-    std::vector<Scene> scenes;
+    void AddScene(Scene* scene);
+
+    void NextScene();
+
+    void PreviousScene();
+
+    Scene* getCurrentScene() const;
+
+
 
 };
 

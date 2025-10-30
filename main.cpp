@@ -8,6 +8,8 @@
 
 #include "Camera.h"
 #include "GameObject.h"
+#include "Scene.h"
+#include "SceneManager.h"
 #include "core/mesh.h"
 #include "core/assimpLoader.h"
 #include "core/texture.h"
@@ -31,8 +33,14 @@
 
 int g_width = 1600;
 int g_height = 900;
-Camera camera(0,5,3);
-//Camera camera(70, g_width/g_height, 0.1f, 200.0f);
+Camera camera(0,0,10);
+
+SceneManager sceneManager;
+Scene scene("Sample Scene", &camera);
+Scene scene1("Scene2", &camera);
+Scene scene2("Scene3", &camera);
+
+//Camera camera1(70, g_width/g_height, 0.1f, 200.0f);
 GLFWcursor* cursor = glfwCreateStandardCursor(GLFW_HRESIZE_CURSOR);
 
 void processInput(GLFWwindow *window) {
@@ -44,8 +52,7 @@ void processInput(GLFWwindow *window) {
 
 }
 
-void framebufferSizeCallback(GLFWwindow *window,
-                             int width, int height) {
+void framebufferSizeCallback(GLFWwindow *window, int width, int height) {
     g_width = width;
     g_height = height;
     glViewport(0, 0, width, height);
@@ -89,10 +96,13 @@ int main() {
     glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
 #endif
 
+    sceneManager.AddScene(&scene);
+    sceneManager.AddScene(&scene1);
+    sceneManager.AddScene(&scene2);
     //camera.transform.position = glm::vec3(0, 0, 10);
     //glm::vec3 cameraTarget = glm::vec3(0.0f, 0.0f, 0.0f);
 
-    GLFWwindow *window = glfwCreateWindow(g_width, g_height, "LearnOpenGL", NULL, NULL);
+    GLFWwindow *window = glfwCreateWindow(g_width, g_height, "Pengine", NULL, NULL);
     if (window == NULL) {
         printf("Failed to create GLFW window\n");
         glfwTerminate();
@@ -162,6 +172,10 @@ int main() {
     GameObject suzanne1(core::AssimpLoader::loadModel("models/nonormalmonkey.obj"), modelShaderProgram);
     suzanne1.transform.position = glm::vec3(0,0.5f,8.0f);
     suzanne1.transform.rotation = glm::vec3(0,30.0f,10.0f);
+
+    scene.AddObject(&suzanne);
+
+    scene1.AddObject(&suzanne1);
     //core::Model suzanne = core::AssimpLoader::loadModel("models/nonormalmonkey.obj");
 
     core::Texture cmgtGatoTexture("textures/CMGaTo_crop.png");
@@ -188,6 +202,10 @@ int main() {
     while (!glfwWindowShouldClose(window)) {
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
+        Scene* currentScene = sceneManager.getCurrentScene();
+        currentScene->Update(deltaTime);
+        currentScene->Render();
+
         camera.ProcessMovementInput(window, deltaTime, cameraSpeed);
         camera.ProcessMouseInput(window,deltaTime, cameraRotationSpeed);
         camera.fov = cameraFOV;
@@ -202,8 +220,13 @@ int main() {
         ImGui_ImplGlfw_NewFrame();
         ImGui::NewFrame();
 
-        ImGui::Begin("Raw Engine v2");
-        ImGui::Button("Change Scene");
+        ImGui::Begin(currentScene->name.c_str());
+        if (ImGui::Button("Next Scene")) {
+            sceneManager.NextScene();
+        };
+        if (ImGui::Button("Previous Scene")) {
+            sceneManager.PreviousScene();
+        };
         ImGui::Text("Hello :)");
         ImGui::End();
 
@@ -217,22 +240,23 @@ int main() {
         ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 
         processInput(window);
+        // suzanne.Update(deltaTime);
+        // suzanne1.Update(deltaTime);
+        //suzanne.transform.Rotate(glm::vec3(0.0f, 1.0f, 0.0f), glm::radians(rotationStrength) * static_cast<float>(deltaTime));
 
-        suzanne.transform.Rotate(glm::vec3(0.0f, 1.0f, 0.0f), glm::radians(rotationStrength) * static_cast<float>(deltaTime));
-
-        glUseProgram(textureShaderProgram);
-        glUniformMatrix4fv(textureModelUniform, 1, GL_FALSE, glm::value_ptr(projection * view * quadModel.getModelMatrix()));
-        glActiveTexture(GL_TEXTURE0);
-        glUniform1i(textureUniform, 0);
-        glBindTexture(GL_TEXTURE_2D, cmgtGatoTexture.getId());
-        quadModel.render();
-        glBindVertexArray(0);
-        glActiveTexture(GL_TEXTURE0);
+        // glUseProgram(textureShaderProgram);
+        // glUniformMatrix4fv(textureModelUniform, 1, GL_FALSE, glm::value_ptr(projection * view * quadModel.getModelMatrix()));
+        // glActiveTexture(GL_TEXTURE0);
+        // glUniform1i(textureUniform, 0);
+        // glBindTexture(GL_TEXTURE_2D, cmgtGatoTexture.getId());
+        // quadModel.render();
+        // glBindVertexArray(0);
+        // glActiveTexture(GL_TEXTURE0);
 
         // glUseProgram(modelShaderProgram);
         // glUniformMatrix4fv(mvpMatrixUniform, 1, GL_FALSE, glm::value_ptr(projection * view * suzanne.transform.getMatrix()));
-        suzanne.Render(projection * view);
-        suzanne1.Render(projection * view);
+        //suzanne.Render(projection * view);
+        //suzanne1.Render(projection * view);
         //glBindVertexArray(0);
 
         ImGui::Render();

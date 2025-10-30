@@ -8,6 +8,10 @@
 
 GameObject::GameObject(const core::Model &model, GLuint shaderProgram) : model(model), shaderProgramID(shaderProgram) {}
 
+void GameObject::Update(float deltaTime) {
+    transform.Rotate(glm::vec3(0.0f, 1.0f, 0.0f), 50 * deltaTime);
+}
+
 void GameObject::Render(const glm::mat4 &viewProj) {
     glUseProgram(shaderProgramID);
     glm::mat4 mvpMatrix = viewProj * transform.getMatrix();
