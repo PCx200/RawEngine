@@ -29,9 +29,10 @@
 #include <imgui_impl_opengl3.h>
 #endif
 
-int g_width = 800;
-int g_height = 600;
-Camera camera(70, g_width/g_height, 0.1f, 200.0f);
+int g_width = 1600;
+int g_height = 900;
+Camera camera(0,5,3);
+//Camera camera(70, g_width/g_height, 0.1f, 200.0f);
 GLFWcursor* cursor = glfwCreateStandardCursor(GLFW_HRESIZE_CURSOR);
 
 void processInput(GLFWwindow *window) {
@@ -88,8 +89,8 @@ int main() {
     glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
 #endif
 
-    camera.transform.position = glm::vec3(0, 0, 10);
-    glm::vec3 cameraTarget = glm::vec3(0.0f, 0.0f, 0.0f);
+    //camera.transform.position = glm::vec3(0, 0, 10);
+    //glm::vec3 cameraTarget = glm::vec3(0.0f, 0.0f, 0.0f);
 
     GLFWwindow *window = glfwCreateWindow(g_width, g_height, "LearnOpenGL", NULL, NULL);
     if (window == NULL) {
@@ -158,6 +159,9 @@ int main() {
 
     GameObject suzanne(core::AssimpLoader::loadModel("models/nonormalmonkey.obj"), modelShaderProgram);
     suzanne.transform.position = glm::vec3(0,0.5f,0);
+    GameObject suzanne1(core::AssimpLoader::loadModel("models/nonormalmonkey.obj"), modelShaderProgram);
+    suzanne1.transform.position = glm::vec3(0,0.5f,8.0f);
+    suzanne1.transform.rotation = glm::vec3(0,30.0f,10.0f);
     //core::Model suzanne = core::AssimpLoader::loadModel("models/nonormalmonkey.obj");
 
     core::Texture cmgtGatoTexture("textures/CMGaTo_crop.png");
@@ -179,8 +183,7 @@ int main() {
     float rotationStrength = 1000.0f;
     float cameraSpeed = 1.0f;
     float cameraRotationSpeed = 20.0f;
-    float cameraFOV = 45.0f;
-
+    float cameraFOV = 70.0f;
 
     while (!glfwWindowShouldClose(window)) {
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -229,6 +232,7 @@ int main() {
         // glUseProgram(modelShaderProgram);
         // glUniformMatrix4fv(mvpMatrixUniform, 1, GL_FALSE, glm::value_ptr(projection * view * suzanne.transform.getMatrix()));
         suzanne.Render(projection * view);
+        suzanne1.Render(projection * view);
         //glBindVertexArray(0);
 
         ImGui::Render();

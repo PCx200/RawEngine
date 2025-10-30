@@ -9,6 +9,10 @@
 
 Camera::Camera() = default;
 
+Camera::Camera(float x, float y, float z) {
+    transform.position = glm::vec3(x,y,z);
+}
+
 Camera::Camera(float fov, float aspect, float nearPlane, float farPlane) {
     this->fov = fov;
     this->aspect = aspect;
@@ -53,19 +57,20 @@ void Camera::ProcessMovementInput(GLFWwindow *window, float deltaTime, float spe
 }
 
 void Camera::ProcessMouseInput(GLFWwindow *window, float deltaTime, float speed) {
-
-    // if (glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_RIGHT) == GLFW_PRESS)
-    //     transform.Rotate(transform.up(), speed * deltaTime);
-    // if (glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS)
-    //     transform.Rotate(transform.up(), -speed * deltaTime);
+    
     if (glfwGetKey(window, GLFW_KEY_RIGHT) == GLFW_PRESS)
-        transform.Rotate(transform.up(), speed * deltaTime);
+        transform.rotation.y += speed * deltaTime;
     if (glfwGetKey(window, GLFW_KEY_LEFT) == GLFW_PRESS)
-        transform.Rotate(transform.up(), -speed * deltaTime);
+        transform.rotation.y -= speed * deltaTime;
     if (glfwGetKey(window, GLFW_KEY_UP) == GLFW_PRESS)
-        transform.Rotate(transform.right(), speed * deltaTime);
+        transform.rotation.x += speed * deltaTime;
     if (glfwGetKey(window, GLFW_KEY_DOWN) == GLFW_PRESS)
-        transform.Rotate(transform.right(), -speed * deltaTime);
+        transform.rotation.x -= speed * deltaTime;
+
+    if (transform.rotation.x > 89.0f)
+        transform.rotation.x = 89.0f;
+    if (transform.rotation.x < -89.0f)
+        transform.rotation.x = -89.0f;
 }
 
 

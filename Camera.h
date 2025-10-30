@@ -20,6 +20,8 @@ public:
 
     Camera();
 
+    Camera(float x, float y, float z);
+
     Camera(float fov, float aspect, float nearPlane, float farPlane);
 
     glm::mat4 getViewMatrix() const;
