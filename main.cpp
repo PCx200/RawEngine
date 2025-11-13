@@ -167,13 +167,20 @@ int main() {
     quadModel.translate(glm::vec3(0,0,-2.5));
     quadModel.scale(glm::vec3(5, 5, 1));
 
+    GameObject quadMod(core::Model({core::Mesh::generateQuad()}), textureShaderProgram);
+    quadMod.transform.position = glm::vec3(0,0,-2.5f);
+    quadMod.transform.scale = glm::vec3(5,5,1);
+
     GameObject suzanne(core::AssimpLoader::loadModel("models/nonormalmonkey.obj"), modelShaderProgram);
     suzanne.transform.position = glm::vec3(0,0.5f,0);
+
     GameObject suzanne1(core::AssimpLoader::loadModel("models/nonormalmonkey.obj"), modelShaderProgram);
     suzanne1.transform.position = glm::vec3(0,0.5f,8.0f);
     suzanne1.transform.rotation = glm::vec3(0,30.0f,10.0f);
 
     scene.AddObject(&suzanne);
+    scene.AddObject(&suzanne1);
+    scene.AddObject(&quadMod);
 
     scene1.AddObject(&suzanne1);
     //core::Model suzanne = core::AssimpLoader::loadModel("models/nonormalmonkey.obj");
@@ -195,12 +202,26 @@ int main() {
     double finishFrameTime = 0.0;
     float deltaTime = 0.0f;
     float rotationStrength = 1000.0f;
-    float cameraSpeed = 1.0f;
-    float cameraRotationSpeed = 20.0f;
+    float cameraSpeed = 3.0f;
+    float cameraRotationSpeed = 50.0f;
     float cameraFOV = 70.0f;
+    float monkeyRot = 0.0f;
+
+    double lastTime = glfwGetTime();
+    int nbFrames = 0;
+    double fps = 0.0f;
 
     while (!glfwWindowShouldClose(window)) {
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+        suzanne.transform.rotation = glm::vec3(0,monkeyRot,0);
+
+        nbFrames++;
+        if ( currentTime - lastTime >= 1.0 ){
+            //printf("%d FPS\n", nbFrames);
+            fps = nbFrames / (currentTime - lastTime);
+            nbFrames = 0;
+            lastTime += 1.0f;
+        }
 
         Scene* currentScene = sceneManager.getCurrentScene();
         currentScene->Update(deltaTime);
@@ -210,8 +231,7 @@ int main() {
         camera.ProcessMouseInput(window,deltaTime, cameraRotationSpeed);
         camera.fov = cameraFOV;
 
-        //camera.transform.Rotate(glm::vec3(0.0f, 1.0f, 0.0f), 5 * deltaTime);
-        //camera.transform.position -=   glm::vec3(0,0.003,0);
+        suzanne1.transform.Rotate(glm::vec3(0,1,0), 360 * deltaTime);
         //VP
         glm::mat4 view = camera.getViewMatrix();
         glm::mat4 projection = camera.getProjectionMatrix();
@@ -224,40 +244,33 @@ int main() {
         if (ImGui::Button("Next Scene")) {
             sceneManager.NextScene();
         };
+        ImGui::SameLine();
         if (ImGui::Button("Previous Scene")) {
             sceneManager.PreviousScene();
         };
-        ImGui::Text("Hello :)");
+        ImGui::Text("FPS: %.1f", fps);
         ImGui::End();
 
         ImGui::Begin("Camera Settings");
-        ImGui::SliderFloat("Camera Speed", &cameraSpeed, 1.0f, 5.0f);
-        ImGui::SliderFloat("Camera Rotation Speed", &cameraRotationSpeed, 1.0f, 50.0f);
+        ImGui::SliderFloat("Camera Speed", &cameraSpeed, 1.0f, 10.0f);
+        ImGui::SliderFloat("Camera Rotation Speed", &cameraRotationSpeed, 1.0f, 100.0f);
         ImGui::SliderFloat("Camera FOV", &cameraFOV, 20.0f, 120.0f);
+        ImGui::SliderFloat("Monkey Rot", &monkeyRot, 0.0f, 360.0f);
         ImGui::End();
 
         ImGui::Render();
         ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 
         processInput(window);
-        // suzanne.Update(deltaTime);
-        // suzanne1.Update(deltaTime);
-        //suzanne.transform.Rotate(glm::vec3(0.0f, 1.0f, 0.0f), glm::radians(rotationStrength) * static_cast<float>(deltaTime));
 
         // glUseProgram(textureShaderProgram);
         // glUniformMatrix4fv(textureModelUniform, 1, GL_FALSE, glm::value_ptr(projection * view * quadModel.getModelMatrix()));
         // glActiveTexture(GL_TEXTURE0);
         // glUniform1i(textureUniform, 0);
         // glBindTexture(GL_TEXTURE_2D, cmgtGatoTexture.getId());
-        // quadModel.render();
+        // //quadModel.render();
         // glBindVertexArray(0);
         // glActiveTexture(GL_TEXTURE0);
-
-        // glUseProgram(modelShaderProgram);
-        // glUniformMatrix4fv(mvpMatrixUniform, 1, GL_FALSE, glm::value_ptr(projection * view * suzanne.transform.getMatrix()));
-        //suzanne.Render(projection * view);
-        //suzanne1.Render(projection * view);
-        //glBindVertexArray(0);
 
         ImGui::Render();
         ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());

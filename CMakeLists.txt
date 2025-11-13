@@ -23,8 +23,6 @@ set(IMGUI_SOURCES
         Scene.h
         GameObject.cpp
         GameObject.h
-        Renderer.cpp
-        Renderer.h
         Transform.cpp
         Transform.h
         Camera.cpp
