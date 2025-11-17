@@ -209,19 +209,11 @@ int main() {
 
     double lastTime = glfwGetTime();
     int nbFrames = 0;
-    double fps = 0.0f;
 
     while (!glfwWindowShouldClose(window)) {
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
         suzanne.transform.rotation = glm::vec3(0,monkeyRot,0);
 
-        nbFrames++;
-        if ( currentTime - lastTime >= 1.0 ){
-            //printf("%d FPS\n", nbFrames);
-            fps = nbFrames / (currentTime - lastTime);
-            nbFrames = 0;
-            lastTime += 1.0f;
-        }
 
         Scene* currentScene = sceneManager.getCurrentScene();
         currentScene->Update(deltaTime);
@@ -248,7 +240,7 @@ int main() {
         if (ImGui::Button("Previous Scene")) {
             sceneManager.PreviousScene();
         };
-        ImGui::Text("FPS: %.1f", fps);
+        ImGui::Text("FPS: %.1f", ImGui::GetIO().Framerate);
         ImGui::End();
 
         ImGui::Begin("Camera Settings");
