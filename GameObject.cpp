@@ -17,6 +17,8 @@ void GameObject::Render(const glm::mat4 &viewProj) {
     glm::mat4 mvpMatrix = viewProj * transform.getMatrix();
     GLuint mvpLoc = glGetUniformLocation(shaderProgramID, "mvpMatrix");
     glUniformMatrix4fv(mvpLoc, 1, GL_FALSE, glm::value_ptr(mvpMatrix));
+    GLint modelMatrixLoc = glGetUniformLocation(shaderProgramID, "modelMatrix");
+    glUniformMatrix4fv(modelMatrixLoc, 1, GL_FALSE, glm::value_ptr(transform.getMatrix()));
     model.render();
     glBindVertexArray(0);
 }

@@ -10,6 +10,7 @@
 
 #include "Camera.h"
 #include "GameObject.h"
+#include "Light.h"
 #include "core/model.h"
 
 
@@ -17,12 +18,20 @@ class Scene {
 private:
     std::vector<GameObject*> objects;
     Camera* camera;
+
+    std::vector<Light*> lights;
+
 public:
     std::string name;
 
     Scene(std::string name,Camera* camera);
 
+    ~Scene();
+
+    // Scene& operator = (const Scene& other);
+
     void AddObject(GameObject* object);
+    void AddLight(Light* light);
 
     void Update(float deltaTime);
 

@@ -34,6 +34,7 @@
 int g_width = 1600;
 int g_height = 900;
 Camera camera(0,0,10);
+Light light(0,0,4, glm::vec4(1,1,1,1));
 
 SceneManager sceneManager;
 Scene scene("Sample Scene", &camera);
@@ -135,6 +136,7 @@ int main() {
 
     const GLuint modelVertexShader = generateShader("shaders/modelVertex.vs", GL_VERTEX_SHADER);
     const GLuint fragmentShader = generateShader("shaders/fragment.fs", GL_FRAGMENT_SHADER);
+    const GLuint litShader = generateShader("shaders/litShader.fs", GL_FRAGMENT_SHADER);
     const GLuint textureShader = generateShader("shaders/texture.fs", GL_FRAGMENT_SHADER);
 
     int success;
@@ -157,10 +159,20 @@ int main() {
         glGetProgramInfoLog(textureShaderProgram, 512, NULL, infoLog);
         printf("Error! Making Shader Program: %s\n", infoLog);
     }
+    const unsigned int litShaderProgram = glCreateProgram();
+    glAttachShader(litShaderProgram, modelVertexShader);
+    glAttachShader(litShaderProgram, litShader);
+    glLinkProgram(litShaderProgram);
+    glGetProgramiv(litShaderProgram, GL_LINK_STATUS, &success);
+    if (!success) {
+        glGetProgramInfoLog(litShaderProgram, 512, NULL, infoLog);
+        printf("Error! Making Shader Program: %s\n", infoLog);
+    }
 
     glDeleteShader(modelVertexShader);
     glDeleteShader(fragmentShader);
     glDeleteShader(textureShader);
+    glDeleteShader(litShader);
 
     core::Mesh quad = core::Mesh::generateQuad();
     core::Model quadModel({quad});
@@ -171,16 +183,17 @@ int main() {
     quadMod.transform.position = glm::vec3(0,0,-2.5f);
     quadMod.transform.scale = glm::vec3(5,5,1);
 
-    GameObject suzanne(core::AssimpLoader::loadModel("models/nonormalmonkey.obj"), modelShaderProgram);
+    GameObject suzanne(core::AssimpLoader::loadModel("models/nonormalmonkey.obj"), litShaderProgram);
     suzanne.transform.position = glm::vec3(0,0.5f,0);
 
-    GameObject suzanne1(core::AssimpLoader::loadModel("models/nonormalmonkey.obj"), modelShaderProgram);
+    GameObject suzanne1(core::AssimpLoader::loadModel("models/nonormalmonkey.obj"), litShaderProgram);
     suzanne1.transform.position = glm::vec3(0,0.5f,8.0f);
     suzanne1.transform.rotation = glm::vec3(0,30.0f,10.0f);
 
     scene.AddObject(&suzanne);
     scene.AddObject(&suzanne1);
-    scene.AddObject(&quadMod);
+    scene.AddLight(&light);
+    //scene.AddObject(&quadMod);
 
     scene1.AddObject(&suzanne1);
     //core::Model suzanne = core::AssimpLoader::loadModel("models/nonormalmonkey.obj");
@@ -197,6 +210,20 @@ int main() {
     GLint mvpMatrixUniform = glGetUniformLocation(modelShaderProgram, "mvpMatrix");
     GLint textureModelUniform = glGetUniformLocation(textureShaderProgram, "mvpMatrix");
     GLint textureUniform = glGetUniformLocation(textureShaderProgram, "text");
+    GLint litMvpUniform = glGetUniformLocation(litShaderProgram, "mvpMatrix");
+    //GLint lightDirUniform = glGetUniformLocation(litShaderProgram, "lightDirection");
+
+    //ADS Uniforms
+    GLint ambientIntensityUniform = glGetUniformLocation(litShaderProgram, "ambientIntensity");
+    GLint lightColorUniform = glGetUniformLocation(litShaderProgram, "lightColor");
+    GLint ambientColorUniform = glGetUniformLocation(litShaderProgram, "ambientColor");
+    GLint diffuseColorUniform = glGetUniformLocation(litShaderProgram, "diffuseColor");
+    GLint speculaColorUniform = glGetUniformLocation(litShaderProgram, "speculaColor");
+    GLint specularIntensityUniform = glGetUniformLocation(litShaderProgram, "specularIntensity");
+    GLint cameraPosUniform = glGetUniformLocation(litShaderProgram, "cameraPos");
+    GLint lightPosUniform = glGetUniformLocation(litShaderProgram, "lightPos");
+
+
 
     double currentTime = glfwGetTime();
     double finishFrameTime = 0.0;
@@ -207,16 +234,20 @@ int main() {
     float cameraFOV = 70.0f;
     float monkeyRot = 0.0f;
 
-    double lastTime = glfwGetTime();
-    int nbFrames = 0;
+    float ambientIntensity = 1.0f;
+    glm::vec3 ambientColor = {0.47f, 0.47f, 0.47f};
+    glm::vec3 diffuseColor = {0.2f, 0.2f, 0.2f};
+    glm::vec3 specularColor = {1, 1, 1};
+    float specularPower = 8.0f;
 
     while (!glfwWindowShouldClose(window)) {
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
         suzanne.transform.rotation = glm::vec3(0,monkeyRot,0);
 
-
+        // order is funny:
         Scene* currentScene = sceneManager.getCurrentScene();
         currentScene->Update(deltaTime);
+
         currentScene->Render();
 
         camera.ProcessMovementInput(window, deltaTime, cameraSpeed);
@@ -250,11 +281,54 @@ int main() {
         ImGui::SliderFloat("Monkey Rot", &monkeyRot, 0.0f, 360.0f);
         ImGui::End();
 
+        ImGui::Begin("Light Settings");
+        ImGui::SliderFloat("Ambient Intensity", &ambientIntensity, 0.0f, 10.0f);
+        ImGui::ColorEdit3("Ambient Color", &ambientColor[0]);
+        ImGui::ColorEdit3("Diffuse Color", &diffuseColor[0]);
+        ImGui::ColorEdit3("Specular Color", &specularColor[0]);
+        ImGui::SliderFloat("Spec Power", &specularPower, 1.0f, 256.0f);
+        //ImGui::SliderFloat3("Camera rotation", rotations, 0.0f, 360.0f);
+        ImGui::End();
+
         ImGui::Render();
         ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 
         processInput(window);
 
+
+        // This is ugly! (Fix it later with materials?)
+        glUseProgram(litShaderProgram);
+        glUniformMatrix4fv(litMvpUniform, 1, GL_FALSE, glm::value_ptr(projection * view * suzanne.model.getModelMatrix()));
+        //glUniform3f(lightDirUniform,1.0f,0.5f,0.0f);
+
+        glUniform1f(ambientIntensityUniform, ambientIntensity);
+        glUniform4fv(lightColorUniform, 1, &light.getColor()[0]); // Red
+        glUniform3fv(ambientColorUniform, 1, glm::value_ptr(ambientColor));
+        glUniform3fv(diffuseColorUniform, 1, glm::value_ptr(diffuseColor));
+        glUniform3fv(speculaColorUniform, 1, glm::value_ptr(specularColor));
+        glUniform1f(specularIntensityUniform, specularPower);
+        //glUniform3f(cameraPosUniform, glm::vec3(camera.transform.position));
+        glUniform3f(cameraPosUniform, camera.transform.position.x, camera.transform.position.y, camera.transform.position.z);
+        //glUniform3f(lightPosUniform,glm::vec3(light.transform.position));
+        glUniform3f(lightPosUniform,light.transform.position.x, light.transform.position.y, light.transform.position.z);
+
+        // uniform float ambientIntensity;
+        // uniform vec3 lightColor;
+        // uniform vec3 ambientColor;
+        // uniform vec3 diffuseColor;
+        // uniform vec3 speculaColor;
+        // uniform float specularIntensity;
+        //
+        // uniform vec3 cameraPos;
+        // uniform vec3 lightPos;
+
+        //glUniformMatrix4fv(textureModelUniform, 1, GL_FALSE, glm::value_ptr(projection * view * quadModel.getModelMatrix()));
+        // glActiveTexture(GL_TEXTURE0);
+        // glUniform1i(textureUniform, 0);
+        // glBindTexture(GL_TEXTURE_2D, cmgtGatoTexture.getId());
+        //quadModel.render();
+        // glBindVertexArray(0);
+        //
         // glUseProgram(textureShaderProgram);
         // glUniformMatrix4fv(textureModelUniform, 1, GL_FALSE, glm::value_ptr(projection * view * quadModel.getModelMatrix()));
         // glActiveTexture(GL_TEXTURE0);

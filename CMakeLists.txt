@@ -27,6 +27,8 @@ set(IMGUI_SOURCES
         Transform.h
         Camera.cpp
         Camera.h
+        Light.cpp
+        Light.h
 )
 
 add_executable(RawEngine main.cpp
