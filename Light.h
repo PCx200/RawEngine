@@ -13,7 +13,9 @@ private: glm::vec4 color;
 public:
     Transform transform;
 
-    Light(float x, float y, float z,glm::vec4 color);
+    float radius;
+
+    Light(float x, float y, float z,glm::vec4 color, float radius);
 
     ~Light();
 

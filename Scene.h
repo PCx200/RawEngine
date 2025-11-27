@@ -31,6 +31,7 @@ public:
     // Scene& operator = (const Scene& other);
 
     void AddObject(GameObject* object);
+
     void AddLight(Light* light);
 
     void Update(float deltaTime);

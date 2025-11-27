@@ -5,6 +5,7 @@
 #include <fstream>
 #include <sstream>
 #include <algorithm>
+#include <iostream>
 
 #include "Camera.h"
 #include "GameObject.h"
@@ -34,7 +35,12 @@
 int g_width = 1600;
 int g_height = 900;
 Camera camera(0,0,10);
-Light light(0,0,4, glm::vec4(1,1,1,1));
+Light light(0,0,20, glm::vec4(1,1,1,1), 10);
+Light light1(0,0,16, glm::vec4(1,0.1f,0.1f,1),10);
+Light light2(0,0,16, glm::vec4(1,0.1f,1.0f,1),10);
+
+std::vector<Light*> lights;
+
 
 SceneManager sceneManager;
 Scene scene("Sample Scene", &camera);
@@ -100,6 +106,10 @@ int main() {
     sceneManager.AddScene(&scene);
     sceneManager.AddScene(&scene1);
     sceneManager.AddScene(&scene2);
+
+    lights.push_back(&light);
+    lights.push_back(&light1);
+    lights.push_back(&light2);
     //camera.transform.position = glm::vec3(0, 0, 10);
     //glm::vec3 cameraTarget = glm::vec3(0.0f, 0.0f, 0.0f);
 
@@ -187,12 +197,26 @@ int main() {
     suzanne.transform.position = glm::vec3(0,0.5f,0);
 
     GameObject suzanne1(core::AssimpLoader::loadModel("models/nonormalmonkey.obj"), litShaderProgram);
-    suzanne1.transform.position = glm::vec3(0,0.5f,8.0f);
+    suzanne1.transform.position = glm::vec3(0,0.5f,18.0f);
     suzanne1.transform.rotation = glm::vec3(0,30.0f,10.0f);
+
+    GameObject suzanne2(core::AssimpLoader::loadModel("models/nonormalmonkey.obj"), litShaderProgram);
+    suzanne2.transform.position = glm::vec3(-3,0.5f,3.0f);
+
+    GameObject suzanne3(core::AssimpLoader::loadModel("models/nonormalmonkey.obj"), litShaderProgram);
+    suzanne3.transform.position = glm::vec3(-7,0.5f,8.0f);
+
+    GameObject suzanne4(core::AssimpLoader::loadModel("models/nonormalmonkey.obj"), litShaderProgram);
+    suzanne4.transform.position = glm::vec3(4,0.5f,12.0f);
 
     scene.AddObject(&suzanne);
     scene.AddObject(&suzanne1);
+    scene.AddObject(&suzanne2);
+    scene.AddObject(&suzanne3);
+    scene.AddObject(&suzanne4);
     scene.AddLight(&light);
+    scene.AddLight(&light1);
+    scene.AddLight(&light2);
     //scene.AddObject(&quadMod);
 
     scene1.AddObject(&suzanne1);
@@ -205,7 +229,21 @@ int main() {
     glClearColor(clearColor.r,
                  clearColor.g, clearColor.b, clearColor.a);
 
+    GLint lightCountUniform = glGetUniformLocation(litShaderProgram, "lightCount");
+    GLint lightPosLocations[10];
+    GLint lightColorLocations[10];
+    GLint lightRadiusLocations[10];
 
+    for (int i = 0; i < 10; i++) {
+        std::string posName = "lights[" + std::to_string(i) + "].position";
+        std::string colName = "lights[" + std::to_string(i) + "].color";
+        std::string radName = "lights[" + std::to_string(i) + "].radius";
+
+
+        lightPosLocations[i] = glGetUniformLocation(litShaderProgram, posName.c_str());
+        lightColorLocations[i] = glGetUniformLocation(litShaderProgram, colName.c_str());
+        lightRadiusLocations[i] = glGetUniformLocation(litShaderProgram, radName.c_str());
+    }
 
     GLint mvpMatrixUniform = glGetUniformLocation(modelShaderProgram, "mvpMatrix");
     GLint textureModelUniform = glGetUniformLocation(textureShaderProgram, "mvpMatrix");
@@ -215,15 +253,11 @@ int main() {
 
     //ADS Uniforms
     GLint ambientIntensityUniform = glGetUniformLocation(litShaderProgram, "ambientIntensity");
-    GLint lightColorUniform = glGetUniformLocation(litShaderProgram, "lightColor");
     GLint ambientColorUniform = glGetUniformLocation(litShaderProgram, "ambientColor");
     GLint diffuseColorUniform = glGetUniformLocation(litShaderProgram, "diffuseColor");
     GLint speculaColorUniform = glGetUniformLocation(litShaderProgram, "speculaColor");
     GLint specularIntensityUniform = glGetUniformLocation(litShaderProgram, "specularIntensity");
     GLint cameraPosUniform = glGetUniformLocation(litShaderProgram, "cameraPos");
-    GLint lightPosUniform = glGetUniformLocation(litShaderProgram, "lightPos");
-
-
 
     double currentTime = glfwGetTime();
     double finishFrameTime = 0.0;
@@ -243,6 +277,8 @@ int main() {
     while (!glfwWindowShouldClose(window)) {
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
         suzanne.transform.rotation = glm::vec3(0,monkeyRot,0);
+
+        //printf("%f,%f,%f", lightPos.x, lightPos.y, lightPos.z);
 
         // order is funny:
         Scene* currentScene = sceneManager.getCurrentScene();
@@ -287,11 +323,15 @@ int main() {
         ImGui::ColorEdit3("Diffuse Color", &diffuseColor[0]);
         ImGui::ColorEdit3("Specular Color", &specularColor[0]);
         ImGui::SliderFloat("Spec Power", &specularPower, 1.0f, 256.0f);
+        ImGui::SliderFloat("Light Radius", &light.radius, 1.0f, 50.0f);
+        ImGui::SliderFloat("Light1 Radius", &light1.radius, 1.0f, 50.0f);
+        ImGui::SliderFloat("Light2 Radius", &light2.radius, 1.0f, 50.0f);
+
+        ImGui::SliderFloat3("Light Position", glm::value_ptr(light.transform.position), -20.0f, 30.0f);
+        ImGui::SliderFloat3("Light1 Position", glm::value_ptr(light1.transform.position), -20.0f, 30.0f);
+        ImGui::SliderFloat3("Light2 Position", glm::value_ptr(light2.transform.position), -20.0f, 30.0f);
         //ImGui::SliderFloat3("Camera rotation", rotations, 0.0f, 360.0f);
         ImGui::End();
-
-        ImGui::Render();
-        ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 
         processInput(window);
 
@@ -302,7 +342,17 @@ int main() {
         //glUniform3f(lightDirUniform,1.0f,0.5f,0.0f);
 
         glUniform1f(ambientIntensityUniform, ambientIntensity);
-        glUniform4fv(lightColorUniform, 1, &light.getColor()[0]); // Red
+        // glUniform4fv(lightColorUniform, 1, &light.getColor()[0]); // Red
+
+        glUniform1i(lightCountUniform, lights.size());
+
+        for (int i = 0; i < lights.size(); i++)
+        {
+            glUniform3fv(lightPosLocations[i], 1, glm::value_ptr(lights[i]->transform.position));
+            glUniform4fv(lightColorLocations[i], 1, glm::value_ptr(lights[i]->getColor()));
+            glUniform1f(lightRadiusLocations[i], lights[i]->radius);
+        }
+
         glUniform3fv(ambientColorUniform, 1, glm::value_ptr(ambientColor));
         glUniform3fv(diffuseColorUniform, 1, glm::value_ptr(diffuseColor));
         glUniform3fv(speculaColorUniform, 1, glm::value_ptr(specularColor));
@@ -310,17 +360,7 @@ int main() {
         //glUniform3f(cameraPosUniform, glm::vec3(camera.transform.position));
         glUniform3f(cameraPosUniform, camera.transform.position.x, camera.transform.position.y, camera.transform.position.z);
         //glUniform3f(lightPosUniform,glm::vec3(light.transform.position));
-        glUniform3f(lightPosUniform,light.transform.position.x, light.transform.position.y, light.transform.position.z);
-
-        // uniform float ambientIntensity;
-        // uniform vec3 lightColor;
-        // uniform vec3 ambientColor;
-        // uniform vec3 diffuseColor;
-        // uniform vec3 speculaColor;
-        // uniform float specularIntensity;
-        //
-        // uniform vec3 cameraPos;
-        // uniform vec3 lightPos;
+        // glUniform3f(lightPosUniform,light.transform.position.x, light.transform.position.y, light.transform.position.z);
 
         //glUniformMatrix4fv(textureModelUniform, 1, GL_FALSE, glm::value_ptr(projection * view * quadModel.getModelMatrix()));
         // glActiveTexture(GL_TEXTURE0);

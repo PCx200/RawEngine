@@ -34,8 +34,8 @@ glm::vec3 Transform::forward() const {
     forward.z = -cos(glm::radians(rotation.x)) * cos(glm::radians(rotation.y)); // minus is funny?
 
     // This is just for comparison: comment it out later:
-    auto mat = getMatrix();
-    auto fwd2 = mat * glm::vec4( 0,0,1,0 );
+    // auto mat = getMatrix();
+    // auto fwd2 = mat * glm::vec4( 0,0,1,0 );
     //printf("forward: (%f,%f,%f)  from matrix: (%f,%f,%f)\n",forward.x,forward.y,forward.z, fwd2.x, fwd2.y, fwd2.z);
 
     return forward;
