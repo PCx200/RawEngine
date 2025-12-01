@@ -14,7 +14,7 @@ public:
     Transform transform;
 
     core::Model model;
-    GLuint shaderProgramID;
+    const GLuint shaderProgramID;
 
     GameObject(const core::Model& model, GLuint shaderProgram);
 

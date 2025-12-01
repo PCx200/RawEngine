@@ -25,6 +25,10 @@ void Scene::AddLight(Light *light) {
     lights.push_back(light);
 }
 
+int Scene::GetLightCount() {
+    return lights.size();
+}
+
 void Scene::Update(float deltaTime) {
     for (int i = 0; i < objects.size(); i++) {
         objects[i]->Update(deltaTime);

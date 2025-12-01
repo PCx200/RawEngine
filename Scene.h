@@ -34,6 +34,8 @@ public:
 
     void AddLight(Light* light);
 
+    int GetLightCount();
+
     void Update(float deltaTime);
 
     void Render() const;

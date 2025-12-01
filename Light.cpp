@@ -4,8 +4,20 @@
 
 #include "Light.h"
 
-Light::Light(float x, float y, float z, glm::vec4 color, float radius) : color(color) {
-    transform.position = glm::vec3(x,y,z);
+#include "GameObject.h"
+#include "core/assimpLoader.h"
+#include "core/model.h"
+
+Light::Light(glm::vec3 position, glm::vec4 color, float radius, GLuint shaderProgram) : GameObject(core::AssimpLoader::loadModel("models/sphere.obj"), shaderProgram),  color(color) {
+    initialize(position, radius);
+}
+
+Light::Light(float x, float y, float z, glm::vec4 color, float radius, GLuint shaderProgram) : GameObject(core::AssimpLoader::loadModel("models/sphere.obj"), shaderProgram),  color(color) {
+    initialize(glm::vec3(x,y,z), radius);
+}
+
+void Light::initialize(glm::vec3 position, float radius) {
+    transform.position = position;
     this->radius = radius;
 }
 
@@ -22,6 +34,10 @@ Light &Light::operator=(const Light &other) {
 
 glm::vec4 Light::getColor() const {
     return this->color;
+}
+
+void Light::setColor(glm::vec4 newColor) {
+    this->color = newColor;
 }
 
 
