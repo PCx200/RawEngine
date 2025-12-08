@@ -6,5 +6,5 @@ in vec2 uv;
 
 void main()
 {
-   FragColor = vec4(fNor.x, fNor.y, fNor.z, 1);
+   FragColor = vec4(1, 1, 1, 1);
 }

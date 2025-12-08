@@ -36,6 +36,8 @@ public:
 
     int GetLightCount();
 
+    std::vector<Light*> GetLights();
+
     void Update(float deltaTime);
 
     void Render() const;
