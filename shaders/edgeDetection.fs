@@ -3,8 +3,8 @@ out vec4 FragColor;
 in vec3 fNor;
 in vec2 uv;
 uniform sampler2D text;
-uniform float thickness = 1.0;
-uniform float clarity = 1.0;
+uniform float thickness;
+uniform float clarity;
 
 void main()
 {

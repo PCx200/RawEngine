@@ -19,6 +19,12 @@ public:
     float nearPlane = 0.1f;
     float farPlane = 100.0f;
 
+    bool firstMouse = true;
+    float lastX = 0.0f;
+    float lastY = 0.0f;
+    float sensitivity = 0.12f;
+    bool invertY = false;
+
     Camera();
 
     Camera(float x, float y, float z);
@@ -31,7 +37,9 @@ public:
 
     void ProcessMovementInput(GLFWwindow *window, float deltaTime, float speed);
 
-    void ProcessMouseInput(GLFWwindow *window, float deltaTime, float speed);
+    //void ProcessMouseInput(GLFWwindow *window, float deltaTime, float speed);
+
+    void ProcessMouseMovement(float xoffset, float yoffset);
 
 
 };

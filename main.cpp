@@ -44,7 +44,7 @@ Scene scene1("Scene2", &camera);
 Scene scene2("Scene3", &camera);
 
 //Camera camera1(70, g_width/g_height, 0.1f, 200.0f);
-GLFWcursor* cursor = glfwCreateStandardCursor(GLFW_HRESIZE_CURSOR);
+GLFWcursor* cursor = glfwCreateStandardCursor(GLFW_ARROW_CURSOR);
 
 void processInput(GLFWwindow *window) {
 
@@ -53,6 +53,39 @@ void processInput(GLFWwindow *window) {
     if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
         glfwSetWindowShouldClose(window, true);
 
+}
+
+void mouse_callback(GLFWwindow* window, double xpos, double ypos) {
+
+    ImGuiIO& io = ImGui::GetIO();
+    if (io.WantCaptureMouse)
+    {
+        camera.firstMouse = true;
+        return;
+    }
+
+    if (glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_RIGHT) == GLFW_PRESS)
+    {
+        if (camera.firstMouse)
+        {
+            camera.lastX = (float)xpos;
+            camera.lastY = (float)ypos;
+            camera.firstMouse = false;
+            return;
+        }
+
+        float xoffset = (float)(xpos - camera.lastX);
+        float yoffset = (float)(camera.lastY - ypos);
+
+        camera.lastX = (float)xpos;
+        camera.lastY = (float)ypos;
+
+        camera.ProcessMouseMovement(xoffset, yoffset);
+    }
+    else
+    {
+        camera.firstMouse = true;
+    }
 }
 
 void framebufferSizeCallback(GLFWwindow *window, int width, int height) {
@@ -114,6 +147,8 @@ int main() {
         return -1;
     }
     glfwMakeContextCurrent(window);
+
+    glfwSetCursorPosCallback(window, mouse_callback);
 
     glfwSetFramebufferSizeCallback(window, framebufferSizeCallback);
 
@@ -340,7 +375,7 @@ int main() {
         currentScene->Update(deltaTime);
 
         camera.ProcessMovementInput(window, deltaTime, cameraSpeed);
-        camera.ProcessMouseInput(window,deltaTime, cameraRotationSpeed);
+        //camera.ProcessMouseInput(window,deltaTime, cameraRotationSpeed);
         camera.fov = cameraFOV;
 
         suzanne1.transform.Rotate(glm::vec3(0,1,0), 360 * deltaTime);
@@ -409,8 +444,6 @@ int main() {
             glBindTexture(GL_TEXTURE_2D, texture);
             quadMod.Render(glm::mat4(1.0f));
         }
-
-
 
         #pragma region ImGui
 
