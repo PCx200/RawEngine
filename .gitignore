@@ -1,0 +1,27 @@
+# CLion IDE files
+.idea/
+*.iml
+
+# CMake build folders
+cmake-build-debug/
+cmake-build-debug-visual-studio/
+Build/
+
+# Visual Studio / Windows
+*.sln
+*.vcxproj*
+*.user
+*.DS_Store
+*.obj
+*.exe
+*.pdb
+*.idb
+
+# Backup / temp files
+*.swp
+*.log
+*.tmp
+*.out
+
+# Ignore OS-specific metadata
+Thumbs.db
