@@ -178,6 +178,7 @@ int main() {
     const GLuint litShader = generateShader("shaders/litShader.fs", GL_FRAGMENT_SHADER);
     const GLuint textureShader = generateShader("shaders/texture.fs", GL_FRAGMENT_SHADER);
     const GLuint edgeDetectionShader = generateShader("shaders/edgeDetection.fs", GL_FRAGMENT_SHADER);
+    const GLuint colorInversionShader = generateShader("shaders/colorInversion.fs", GL_FRAGMENT_SHADER);
 
     int success;
     char infoLog[512];
@@ -218,19 +219,30 @@ int main() {
         glGetProgramInfoLog(edgeDetectionShaderProgram, 512, NULL, infoLog);
         printf("Error! Making Shader Program: %s\n", infoLog);
     }
+    const unsigned int colorInversionShaderProgram = glCreateProgram();
+    glAttachShader(colorInversionShaderProgram, modelVertexShader);
+    glAttachShader(colorInversionShaderProgram, colorInversionShader);
+    glLinkProgram(colorInversionShaderProgram);
+    glGetProgramiv(colorInversionShaderProgram, GL_LINK_STATUS, &success);
+    if (!success) {
+        glGetProgramInfoLog(colorInversionShaderProgram, 512, NULL, infoLog);
+        printf("Error! Making Shader Program: %s\n", infoLog);
+    }
 
     glDeleteShader(modelVertexShader);
     glDeleteShader(fragmentShader);
     glDeleteShader(textureShader);
     glDeleteShader(litShader);
     glDeleteShader(edgeDetectionShader);
+    glDeleteShader(colorInversionShader);
 
     // core::Mesh quad = core::Mesh::generateQuad();
     // core::Model quadModel({quad});
     // quadModel.translate(glm::vec3(0,0,-2.5));
     // quadModel.scale(glm::vec3(5, 5, 1));
 
-    GameObject quadMod(core::Model({core::Mesh::generateQuad()}), edgeDetectionShaderProgram);
+    GameObject edgeDetectionQuad(core::Model({core::Mesh::generateQuad()}), edgeDetectionShaderProgram);
+    GameObject colorInversionQuad(core::Model({core::Mesh::generateQuad()}), colorInversionShaderProgram);
     // quadMod.transform.position = glm::vec3(0,0,-2.5f);
     // quadMod.transform.scale = glm::vec3(5,5,1);
 
@@ -268,6 +280,7 @@ int main() {
 
     scene2.AddLight(&light);
 
+    //edge detection buffers
     unsigned int framebuffer;
     glGenFramebuffers(1, &framebuffer);
     glBindFramebuffer(GL_FRAMEBUFFER, framebuffer);
@@ -286,6 +299,19 @@ int main() {
     glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, g_width, g_height);
     glBindRenderbuffer(GL_RENDERBUFFER, 0);
     glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, rbo);
+
+    //color inversion buffers
+    unsigned int ciframebuffer;
+    glGenFramebuffers(1, &ciframebuffer);
+    glBindFramebuffer(GL_FRAMEBUFFER, ciframebuffer);
+
+    unsigned int citexture;
+    glGenTextures(1, &citexture);
+    glBindTexture(GL_TEXTURE_2D, citexture);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, g_width, g_height, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, citexture, 0);
 
     if(glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
         std::cout << "ERROR::FRAMEBUFFER:: Framebuffer is not complete!" << std::endl;
@@ -352,15 +378,22 @@ int main() {
     glm::vec4 newLightColor = glm::vec4(1, 0.1f, 0.5f, 1);
     float newLightRadius = 10.0f;
 
-    bool usePostProcessing = false;
+    bool useEdgeDetection = false;
+    bool useInvertColors = false;
     float thickness = 1.0f;
     float clarity = 1.0f;
 
     while (!glfwWindowShouldClose(window)) {
         processInput(window);
 
-
-        glBindFramebuffer(GL_FRAMEBUFFER, usePostProcessing ? framebuffer : 0);
+        if (useEdgeDetection) {
+            glBindFramebuffer(GL_FRAMEBUFFER, framebuffer);
+        }
+        else if (useInvertColors) {
+            glBindFramebuffer(GL_FRAMEBUFFER, ciframebuffer);
+        } else {
+            glBindFramebuffer(GL_FRAMEBUFFER, 0);
+        }
         glEnable(GL_DEPTH_TEST);
         glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -430,7 +463,7 @@ int main() {
         // TODO: think about how to render objects with different uniforms, like colors/tints?
         currentScene->Render();
 
-        if (usePostProcessing) {
+        if (useEdgeDetection) {
             glBindFramebuffer(GL_FRAMEBUFFER, 0);
             glDisable(GL_DEPTH_TEST);
             glClear(GL_COLOR_BUFFER_BIT);
@@ -442,7 +475,20 @@ int main() {
 
             glActiveTexture(GL_TEXTURE0);
             glBindTexture(GL_TEXTURE_2D, texture);
-            quadMod.Render(glm::mat4(1.0f));
+            edgeDetectionQuad.Render(glm::mat4(1.0f));
+        }
+        if (useInvertColors) {
+            glBindFramebuffer(GL_FRAMEBUFFER, 0);
+            glDisable(GL_DEPTH_TEST);
+            glClear(GL_COLOR_BUFFER_BIT);
+
+            glUseProgram(colorInversionShaderProgram);
+
+            glUniform1f(textureUniform, 0);
+
+            glActiveTexture(GL_TEXTURE0);
+            glBindTexture(GL_TEXTURE_2D, citexture);
+            colorInversionQuad.Render(glm::mat4(1.0f));
         }
 
         #pragma region ImGui
@@ -454,12 +500,9 @@ int main() {
         ImGui::Begin("Post-Processing");
         ImGui::SliderFloat("Line Thickness", &thickness, 1.0f, 10.0f);
         ImGui::SliderFloat("Line Clarity", &clarity, 1.0f, 10.0f);
-        if (ImGui::Button("Invert Colors")) {
-            usePostProcessing = !usePostProcessing;
-
-
-
-            printf("%d \n", usePostProcessing);
+        if (ImGui::Checkbox("Edge Detection", &useEdgeDetection)) {
+        }
+        if (ImGui::Checkbox("Invert Colors", &useInvertColors)) {
         }
         ImGui::End();
 
