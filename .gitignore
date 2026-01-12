@@ -1,27 +1,121 @@
-# CLion IDE files
-.idea/
-*.iml
+# --- CMake ---
+CMakeCache.txt
+CMakeFiles/
+CMakeScripts/
+Testing/
+Makefile
+cmake_install.cmake
+install_manifest.txt
+compile_commands.json
+CTestTestfile.cmake
+_deps/
+build/
+build-*/
+out/
+bin/
+lib/
+obj/
 
-# CMake build folders
-cmake-build-debug/
-cmake-build-debug-visual-studio/
-Build/
-
-# Visual Studio / Windows
-*.sln
-*.vcxproj*
-*.user
-*.DS_Store
+# --- Compiled Object Files ---
+*.o
 *.obj
+*.lo
+*.slo
+*.Plo
+
+# --- Precompiled Headers ---
+*.gch
+*.pch
+
+# --- Compiled Dynamic Libraries ---
+*.so
+*.dylib
+*.dll
+
+# --- Compiled Static Libraries ---
+*.a
+*.lib
+*.la
+
+# --- Executables ---
 *.exe
-*.pdb
-*.idb
-
-# Backup / temp files
-*.swp
-*.log
-*.tmp
 *.out
+*.app
+*.i*86
+*.x86_64
+*.hex
 
-# Ignore OS-specific metadata
+# --- Logs and Debug ---
+*.log
+*.cache
+*.gz
+*.tmp
+*.temp
+*.bak
+*.swp
+*.dSYM/
+vgcore.*
+
+# --- IDE / Editor Files ---
+
+## Visual Studio
+.vs/
+*.vcxproj*
+*.sln
+*.user
+*.opensdf
+*.sdf
+*.ipch
+
+## Visual Studio Code
+.vscode/
+*.code-workspace
+
+## CLion / JetBrains
+.idea/
+cmake-build-*/
+
+## Xcode
+*.xcworkspace
+*.xcodeproj
+*.xcuserdata
+
+# --- OS Files ---
+.DS_Store
 Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# --- Engine Specific (optional cleanup) ---
+thirdparty/build/
+external/build/
+*.generated.*
+*.gen.*
+*.ninja
+.ninja_deps
+.ninja_log
+cache/
+temp/
+
+# --- Package Managers ---
+# vcpkg
+vcpkg_installed/
+vcpkg_buildtrees/
+vcpkg_downloads/
+vcpkg_packages/
+
+# Conan
+.conan/
+conanbuildinfo.*
+conan.lock
+
+# CCache / ClangCache
+.ccache/
+.clangd/
+.clang-format
+.clang-tidy
+
+# --- Misc ---
+*.env
+.env.*
+*.config
