@@ -7,5 +7,5 @@ uniform sampler2D text;
 void main()
 {
     vec4 diffuse = texture(text, uv);
-    FragColor = vec4(1 - vec3(diffuse), 1);
+    FragColor = vec4(vec3(diffuse), 1);
 }

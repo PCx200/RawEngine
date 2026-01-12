@@ -16,6 +16,8 @@ uniform float specularIntensity;
 
 uniform vec3 cameraPos;
 
+uniform sampler2D text;
+
 out vec4 FragColor;
 in vec3 fPos;
 in vec3 fNor;
@@ -52,5 +54,5 @@ void main()
         result += attenuation * (diffuse + specular);
     }
 
-        FragColor = vec4(result, 1);
+        FragColor = vec4(result + vec3(texture(text, uv)), 1);
 }

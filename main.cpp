@@ -246,6 +246,8 @@ int main() {
     // quadMod.transform.position = glm::vec3(0,0,-2.5f);
     // quadMod.transform.scale = glm::vec3(5,5,1);
 
+    core::Texture grassTexture = core::Texture("textures/grass_texture.jpg");
+
     GameObject suzanne(core::AssimpLoader::loadModel("models/nonormalmonkey.obj"), litShaderProgram);
     suzanne.transform.position = glm::vec3(0,0.5f,0);
 
@@ -261,6 +263,13 @@ int main() {
 
     GameObject suzanne4(core::AssimpLoader::loadModel("models/nonormalmonkey.obj"), litShaderProgram);
     suzanne4.transform.position = glm::vec3(4,0.5f,12.0f);
+
+    // GameObject car(core::AssimpLoader::loadModel("models/NissanS30.obj"), litShaderProgram);
+    // car.transform.position = glm::vec3(0.0f,0.0f,-5.0f);
+
+    GameObject plane(core::AssimpLoader::loadModel("models/Plane.obj"), grassTexture, litShaderProgram);
+    plane.transform.position = glm::vec3(0.0f,-5.0f,-5.0f);
+    plane.transform.scale = glm::vec3(5.0f,1.0f,5.0f);
 
     Light light(0,0,20, glm::vec4(1,1,1,1), 10, modelShaderProgram);
     light.transform.scale *= 0.1;
@@ -279,6 +288,9 @@ int main() {
     scene1.AddObject(&suzanne1);
 
     scene2.AddLight(&light);
+    scene2.AddObject(&light);
+    //scene2.AddObject(&car);
+    scene2.AddObject(&plane);
 
     //edge detection buffers
     unsigned int framebuffer;
@@ -313,6 +325,13 @@ int main() {
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
     glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, citexture, 0);
 
+    unsigned int cirbo;
+    glGenRenderbuffers(1, &cirbo);
+    glBindRenderbuffer(GL_RENDERBUFFER, cirbo);
+    glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, g_width, g_height);
+    glBindRenderbuffer(GL_RENDERBUFFER, 0);
+    glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, cirbo);
+
     if(glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
         std::cout << "ERROR::FRAMEBUFFER:: Framebuffer is not complete!" << std::endl;
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
@@ -343,7 +362,7 @@ int main() {
 
     GLint mvpMatrixUniform = glGetUniformLocation(modelShaderProgram, "mvpMatrix");
     GLint textureModelUniform = glGetUniformLocation(textureShaderProgram, "mvpMatrix");
-    GLint textureUniform = glGetUniformLocation(textureShaderProgram, "text");
+    GLint textureUniform = glGetUniformLocation(colorInversionShaderProgram, "text");
     GLint litMvpUniform = glGetUniformLocation(litShaderProgram, "mvpMatrix");
     //GLint lightDirUniform = glGetUniformLocation(litShaderProgram, "lightDirection");
 
@@ -359,6 +378,9 @@ int main() {
     GLint thicknessUniform = glGetUniformLocation(edgeDetectionShaderProgram, "thickness");
     GLint clarityUniform = glGetUniformLocation(edgeDetectionShaderProgram, "clarity");
 
+    //Texture
+    GLint grassTextureUniform = glGetUniformLocation(litShaderProgram, "text");
+
     double currentTime = glfwGetTime();
     double finishFrameTime = 0.0;
     float deltaTime = 0.0f;
@@ -368,7 +390,7 @@ int main() {
     float monkeyRot = 0.0f;
 
     glm::vec4 lightColor = glm::vec4(1.0f, 1.0f, 1.0f, 1.0f);
-    float ambientIntensity = 1.0f;
+    float ambientIntensity = 0.0f;
     glm::vec3 ambientColor = {0.47f, 0.47f, 0.47f};
     glm::vec3 diffuseColor = {0.2f, 0.2f, 0.2f};
     glm::vec3 specularColor = {1, 1, 1};
@@ -391,13 +413,14 @@ int main() {
         }
         else if (useInvertColors) {
             glBindFramebuffer(GL_FRAMEBUFFER, ciframebuffer);
-        } else {
+        }
+        else {
             glBindFramebuffer(GL_FRAMEBUFFER, 0);
         }
+
         glEnable(GL_DEPTH_TEST);
         glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
 
         suzanne.transform.rotation = glm::vec3(0,monkeyRot,0);
         light.setColor(lightColor);
@@ -444,50 +467,43 @@ int main() {
         //glUniform3f(lightPosUniform,glm::vec3(light.transform.position));
         // glUniform3f(lightPosUniform,light.transform.position.x, light.transform.position.y, light.transform.position.z);
 
-        //glUniformMatrix4fv(textureModelUniform, 1, GL_FALSE, glm::value_ptr(projection * view * quadModel.getModelMatrix()));
-        // glActiveTexture(GL_TEXTURE0);
-        // glUniform1i(textureUniform, 0);
-        // glBindTexture(GL_TEXTURE_2D, cmgtGatoTexture.getId());
-        //quadModel.render();
-        // glBindVertexArray(0);
-        //
-        // glUseProgram(textureShaderProgram);
         // glUniformMatrix4fv(textureModelUniform, 1, GL_FALSE, glm::value_ptr(projection * view * quadModel.getModelMatrix()));
-        // glActiveTexture(GL_TEXTURE0);
-        // glUniform1i(textureUniform, 0);
-        // glBindTexture(GL_TEXTURE_2D, cmgtGatoTexture.getId());
-        // //quadModel.render();
-        // glBindVertexArray(0);
-        // glActiveTexture(GL_TEXTURE0);
+        //  glActiveTexture(GL_TEXTURE0);
+        //  glUniform1i(textureUniform, 0);
+        //  glBindTexture(GL_TEXTURE_2D, cmgtGatoTexture.getId());
+        // quadModel.render();
+        //  glBindVertexArray(0);
+        //
+        glUseProgram(textureShaderProgram);
+        glUniformMatrix4fv(grassTextureUniform, 1, GL_FALSE, glm::value_ptr(projection * view * plane.model.getModelMatrix()));
+        //  glUniformMatrix4fv(textureModelUniform, 1, GL_FALSE, glm::value_ptr(projection * view * quadModel.getModelMatrix()));
+        glActiveTexture(GL_TEXTURE0);
+        glUniform1i(grassTextureUniform, 0);
+        glBindTexture(GL_TEXTURE_2D, grassTexture.getId());
+        //quadModel.render();
+        glBindVertexArray(0);
+        glActiveTexture(GL_TEXTURE0);
 
-        // TODO: think about how to render objects with different uniforms, like colors/tints?
         currentScene->Render();
 
+        glBindFramebuffer(GL_FRAMEBUFFER, 0);
         if (useEdgeDetection) {
-            glBindFramebuffer(GL_FRAMEBUFFER, 0);
             glDisable(GL_DEPTH_TEST);
             glClear(GL_COLOR_BUFFER_BIT);
-
             glUseProgram(edgeDetectionShaderProgram);
-
             glUniform1f(thicknessUniform, thickness);
             glUniform1f(clarityUniform, clarity);
-
             glActiveTexture(GL_TEXTURE0);
             glBindTexture(GL_TEXTURE_2D, texture);
             edgeDetectionQuad.Render(glm::mat4(1.0f));
         }
-        if (useInvertColors) {
-            glBindFramebuffer(GL_FRAMEBUFFER, 0);
+        else if (useInvertColors) {
             glDisable(GL_DEPTH_TEST);
             glClear(GL_COLOR_BUFFER_BIT);
-
             glUseProgram(colorInversionShaderProgram);
-
-            glUniform1f(textureUniform, 0);
-
             glActiveTexture(GL_TEXTURE0);
             glBindTexture(GL_TEXTURE_2D, citexture);
+            glUniform1i(textureUniform, 0);
             colorInversionQuad.Render(glm::mat4(1.0f));
         }
 
@@ -553,7 +569,7 @@ int main() {
             printf("Light was added \n");
         }
         ImGui::ColorEdit3("Light Color",&lightColor[0]);
-        ImGui::SliderFloat("Ambient Intensity", &ambientIntensity, 0.0f, 10.0f);
+        ImGui::SliderFloat("Ambient Intensity", &ambientIntensity, -1.0f, 1.0f);
         ImGui::ColorEdit3("Ambient Color", &ambientColor[0]);
         ImGui::ColorEdit3("Diffuse Color", &diffuseColor[0]);
         ImGui::ColorEdit3("Specular Color", &specularColor[0]);
@@ -581,7 +597,9 @@ int main() {
     ImGui_ImplGlfw_Shutdown();
     ImGui::DestroyContext();
     glDeleteRenderbuffers(1, &rbo);
+    glDeleteRenderbuffers(1, &cirbo);
     glDeleteFramebuffers(1, &framebuffer);
+    glDeleteFramebuffers(1, &ciframebuffer);
 
     glfwTerminate();
     return 0;

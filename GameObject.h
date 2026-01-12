@@ -14,9 +14,12 @@ public:
     Transform transform;
 
     core::Model model;
+    core::Texture texture;
     const GLuint shaderProgramID;
 
     GameObject(const core::Model& model, GLuint shaderProgram);
+
+    GameObject(const core::Model& model, core::Texture& texture, GLuint shaderProgram);
 
     void Update(float deltaTime);
 
