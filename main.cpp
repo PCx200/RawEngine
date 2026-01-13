@@ -179,6 +179,7 @@ int main() {
     const GLuint textureShader = generateShader("shaders/texture.fs", GL_FRAGMENT_SHADER);
     const GLuint edgeDetectionShader = generateShader("shaders/edgeDetection.fs", GL_FRAGMENT_SHADER);
     const GLuint colorInversionShader = generateShader("shaders/colorInversion.fs", GL_FRAGMENT_SHADER);
+    const GLuint pixelationShader = generateShader("shaders/pixelation.fs", GL_FRAGMENT_SHADER);
 
     int success;
     char infoLog[512];
@@ -228,6 +229,15 @@ int main() {
         glGetProgramInfoLog(colorInversionShaderProgram, 512, NULL, infoLog);
         printf("Error! Making Shader Program: %s\n", infoLog);
     }
+    const unsigned int pixelationShaderProgram = glCreateProgram();
+    glAttachShader(pixelationShaderProgram, modelVertexShader);
+    glAttachShader(pixelationShaderProgram, pixelationShader);
+    glLinkProgram(pixelationShaderProgram);
+    glGetProgramiv(pixelationShaderProgram, GL_LINK_STATUS, &success);
+    if (!success) {
+        glGetProgramInfoLog(pixelationShaderProgram, 512, NULL, infoLog);
+        printf("Error! Making Shader Program: %s\n", infoLog);
+    }
 
     glDeleteShader(modelVertexShader);
     glDeleteShader(fragmentShader);
@@ -235,6 +245,7 @@ int main() {
     glDeleteShader(litShader);
     glDeleteShader(edgeDetectionShader);
     glDeleteShader(colorInversionShader);
+    glDeleteShader(pixelationShader);
 
     // core::Mesh quad = core::Mesh::generateQuad();
     // core::Model quadModel({quad});
@@ -243,6 +254,10 @@ int main() {
 
     GameObject edgeDetectionQuad(core::Model({core::Mesh::generateQuad()}), edgeDetectionShaderProgram);
     GameObject colorInversionQuad(core::Model({core::Mesh::generateQuad()}), colorInversionShaderProgram);
+    GameObject pixelationQuad(core::Model({core::Mesh::generateQuad()}), pixelationShaderProgram);
+    edgeDetectionQuad.useTexture = false;
+    colorInversionQuad.useTexture = false;
+    pixelationQuad.useTexture = false;
     // quadMod.transform.position = glm::vec3(0,0,-2.5f);
     // quadMod.transform.scale = glm::vec3(5,5,1);
 
@@ -332,6 +347,26 @@ int main() {
     glBindRenderbuffer(GL_RENDERBUFFER, 0);
     glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, cirbo);
 
+    //pixelation buffers
+    unsigned int pixelationFramebuffer;
+    glGenFramebuffers(1, &pixelationFramebuffer);
+    glBindFramebuffer(GL_FRAMEBUFFER, pixelationFramebuffer);
+
+    unsigned int pixelationTexture;
+    glGenTextures(1, &pixelationTexture);
+    glBindTexture(GL_TEXTURE_2D, pixelationTexture);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, g_width, g_height, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, pixelationTexture, 0);
+
+    unsigned int pixelationRBO;
+    glGenRenderbuffers(1, &pixelationRBO);
+    glBindRenderbuffer(GL_RENDERBUFFER, pixelationRBO);
+    glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, g_width, g_height);
+    glBindRenderbuffer(GL_RENDERBUFFER, 0);
+    glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, pixelationRBO);
+
     if(glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
         std::cout << "ERROR::FRAMEBUFFER:: Framebuffer is not complete!" << std::endl;
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
@@ -363,6 +398,7 @@ int main() {
     GLint mvpMatrixUniform = glGetUniformLocation(modelShaderProgram, "mvpMatrix");
     GLint textureModelUniform = glGetUniformLocation(textureShaderProgram, "mvpMatrix");
     GLint textureUniform = glGetUniformLocation(colorInversionShaderProgram, "text");
+    GLint pixelationTextureUniform = glGetUniformLocation(pixelationShaderProgram, "text");
     GLint litMvpUniform = glGetUniformLocation(litShaderProgram, "mvpMatrix");
     //GLint lightDirUniform = glGetUniformLocation(litShaderProgram, "lightDirection");
 
@@ -380,6 +416,10 @@ int main() {
 
     //Texture
     GLint grassTextureUniform = glGetUniformLocation(litShaderProgram, "text");
+
+    //pixelation uniforms
+    GLint pixelSizeUniform = glGetUniformLocation(pixelationShaderProgram, "pixelSize");
+    GLint screenSize = glGetUniformLocation(pixelationShaderProgram, "screenSize");
 
     double currentTime = glfwGetTime();
     double finishFrameTime = 0.0;
@@ -402,17 +442,27 @@ int main() {
 
     bool useEdgeDetection = false;
     bool useInvertColors = false;
+    bool usePixelation = false;
+
     float thickness = 1.0f;
     float clarity = 1.0f;
 
+    float pixelSize = 16.0f;
+
     while (!glfwWindowShouldClose(window)) {
         processInput(window);
+
+        glUniform2f(screenSize, g_width, g_height);
 
         if (useEdgeDetection) {
             glBindFramebuffer(GL_FRAMEBUFFER, framebuffer);
         }
         else if (useInvertColors) {
             glBindFramebuffer(GL_FRAMEBUFFER, ciframebuffer);
+        }
+        else if (usePixelation)
+        {
+            glBindFramebuffer(GL_FRAMEBUFFER, pixelationFramebuffer);
         }
         else {
             glBindFramebuffer(GL_FRAMEBUFFER, 0);
@@ -474,15 +524,15 @@ int main() {
         // quadModel.render();
         //  glBindVertexArray(0);
         //
-        glUseProgram(textureShaderProgram);
-        glUniformMatrix4fv(grassTextureUniform, 1, GL_FALSE, glm::value_ptr(projection * view * plane.model.getModelMatrix()));
-        //  glUniformMatrix4fv(textureModelUniform, 1, GL_FALSE, glm::value_ptr(projection * view * quadModel.getModelMatrix()));
-        glActiveTexture(GL_TEXTURE0);
-        glUniform1i(grassTextureUniform, 0);
-        glBindTexture(GL_TEXTURE_2D, grassTexture.getId());
-        //quadModel.render();
-        glBindVertexArray(0);
-        glActiveTexture(GL_TEXTURE0);
+        // glUseProgram(textureShaderProgram);
+        // glUniformMatrix4fv(grassTextureUniform, 1, GL_FALSE, glm::value_ptr(projection * view * plane.model.getModelMatrix()));
+        // //  glUniformMatrix4fv(textureModelUniform, 1, GL_FALSE, glm::value_ptr(projection * view * quadModel.getModelMatrix()));
+        // glActiveTexture(GL_TEXTURE0);
+        // glUniform1i(grassTextureUniform, 0);
+        // glBindTexture(GL_TEXTURE_2D, grassTexture.getId());
+        // //quadModel.render();
+        // glBindVertexArray(0);
+        // glActiveTexture(GL_TEXTURE0);
 
         currentScene->Render();
 
@@ -503,8 +553,17 @@ int main() {
             glUseProgram(colorInversionShaderProgram);
             glActiveTexture(GL_TEXTURE0);
             glBindTexture(GL_TEXTURE_2D, citexture);
-            glUniform1i(textureUniform, 0);
             colorInversionQuad.Render(glm::mat4(1.0f));
+        }
+        else if (usePixelation)
+        {
+            glDisable(GL_DEPTH_TEST);
+            glClear(GL_COLOR_BUFFER_BIT);
+            glUseProgram(pixelationShaderProgram);
+            glUniform1f(pixelSizeUniform, pixelSize);
+            glActiveTexture(GL_TEXTURE0);
+            glBindTexture(GL_TEXTURE_2D, pixelationTexture);
+            pixelationQuad.Render(glm::mat4(1.0f));
         }
 
         #pragma region ImGui
@@ -514,11 +573,21 @@ int main() {
         ImGui::NewFrame();
 
         ImGui::Begin("Post-Processing");
-        ImGui::SliderFloat("Line Thickness", &thickness, 1.0f, 10.0f);
-        ImGui::SliderFloat("Line Clarity", &clarity, 1.0f, 10.0f);
+
         if (ImGui::Checkbox("Edge Detection", &useEdgeDetection)) {
         }
+        if (useEdgeDetection)
+        {
+            ImGui::SliderFloat("Line Thickness", &thickness, 1.0f, 10.0f);
+            ImGui::SliderFloat("Line Clarity", &clarity, 1.0f, 10.0f);
+        }
         if (ImGui::Checkbox("Invert Colors", &useInvertColors)) {
+        }
+        if (ImGui::Checkbox("Pixelate", &usePixelation)) {
+        }
+        if (usePixelation)
+        {
+            ImGui::SliderFloat("Pixle Size", &pixelSize, 4.0f, 32.0f);
         }
         ImGui::End();
 
@@ -598,8 +667,10 @@ int main() {
     ImGui::DestroyContext();
     glDeleteRenderbuffers(1, &rbo);
     glDeleteRenderbuffers(1, &cirbo);
+    glDeleteRenderbuffers(1, &pixelationRBO);
     glDeleteFramebuffers(1, &framebuffer);
     glDeleteFramebuffers(1, &ciframebuffer);
+    glDeleteFramebuffers(1, &pixelationFramebuffer);
 
     glfwTerminate();
     return 0;

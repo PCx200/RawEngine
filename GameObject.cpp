@@ -16,10 +16,10 @@ void GameObject::Update(float deltaTime) {
 
 void GameObject::Render(const glm::mat4 &viewProj) {
     glUseProgram(shaderProgramID);
-
-    glBindTexture(GL_TEXTURE_2D, texture.getId());
-    glBindVertexArray(0);
-
+    if (useTexture)
+    {
+        glBindTexture(GL_TEXTURE_2D, texture.getId());
+    }
     glm::mat4 mvpMatrix = viewProj * transform.getMatrix();
     GLuint mvpLoc = glGetUniformLocation(shaderProgramID, "mvpMatrix");
     glUniformMatrix4fv(mvpLoc, 1, GL_FALSE, glm::value_ptr(mvpMatrix));

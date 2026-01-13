@@ -15,6 +15,7 @@ public:
 
     core::Model model;
     core::Texture texture;
+    bool useTexture = true;
     const GLuint shaderProgramID;
 
     GameObject(const core::Model& model, GLuint shaderProgram);
