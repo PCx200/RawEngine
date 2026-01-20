@@ -449,6 +449,8 @@ int main() {
 
     float pixelSize = 16.0f;
 
+    bool showWireframe = false;
+
     while (!glfwWindowShouldClose(window)) {
         processInput(window);
 
@@ -566,11 +568,25 @@ int main() {
             pixelationQuad.Render(glm::mat4(1.0f));
         }
 
+        if (showWireframe)
+        {
+            glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+        }
+        else
+        {
+            glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+        }
+
         #pragma region ImGui
 
         ImGui_ImplOpenGL3_NewFrame();
         ImGui_ImplGlfw_NewFrame();
         ImGui::NewFrame();
+
+        ImGui::Begin("Wireframe");
+        if (ImGui::Checkbox("Enable Wireframe", &showWireframe)) {
+        }
+        ImGui::End();
 
         ImGui::Begin("Post-Processing");
 
