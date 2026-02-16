@@ -29,6 +29,8 @@ set(IMGUI_SOURCES
         Camera.h
         Light.cpp
         Light.h
+        Shader.cpp
+        Shader.h
 )
 
 add_executable(RawEngine main.cpp

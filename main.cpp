@@ -11,6 +11,7 @@
 #include "GameObject.h"
 #include "Scene.h"
 #include "SceneManager.h"
+#include "Shader.h"
 #include "core/mesh.h"
 #include "core/assimpLoader.h"
 #include "core/texture.h"
@@ -35,8 +36,6 @@
 int g_width = 1600;
 int g_height = 900;
 Camera camera(0,0,10);
-
-std::vector<Light*> lights;
 
 SceneManager sceneManager;
 Scene scene("Sample Scene", &camera);
@@ -68,17 +67,17 @@ void mouse_callback(GLFWwindow* window, double xpos, double ypos) {
     {
         if (camera.firstMouse)
         {
-            camera.lastX = (float)xpos;
-            camera.lastY = (float)ypos;
+            camera.lastX = static_cast<float>(xpos);
+            camera.lastY = static_cast<float>(ypos);
             camera.firstMouse = false;
             return;
         }
 
-        float xoffset = (float)(xpos - camera.lastX);
-        float yoffset = (float)(camera.lastY - ypos);
+        auto xoffset = static_cast<float>(xpos - camera.lastX);
+        auto yoffset = static_cast<float>(camera.lastY - ypos);
 
-        camera.lastX = (float)xpos;
-        camera.lastY = (float)ypos;
+        camera.lastX = static_cast<float>(xpos);
+        camera.lastY = static_cast<float>(ypos);
 
         camera.ProcessMouseMovement(xoffset, yoffset);
     }
@@ -116,7 +115,7 @@ GLuint generateShader(const std::string &shaderPath, GLuint shaderType) {
     glGetShaderiv(shader, GL_COMPILE_STATUS, &success);
     if (!success) {
         char infoLog[512];
-        glGetShaderInfoLog(shader, 512, NULL, infoLog);
+        glGetShaderInfoLog(shader, 512, nullptr, infoLog);
         printf("Error! Shader issue [%s]: %s\n", shaderPath.c_str(), infoLog);
     }
     return shader;
@@ -140,8 +139,8 @@ int main() {
     //camera.transform.position = glm::vec3(0, 0, 10);
     //glm::vec3 cameraTarget = glm::vec3(0.0f, 0.0f, 0.0f);
 
-    GLFWwindow *window = glfwCreateWindow(g_width, g_height, "Pengine", NULL, NULL);
-    if (window == NULL) {
+    GLFWwindow *window = glfwCreateWindow(g_width, g_height, "Pengine", nullptr, nullptr);
+    if (window == nullptr) {
         printf("Failed to create GLFW window\n");
         glfwTerminate();
         return -1;
@@ -152,7 +151,7 @@ int main() {
 
     glfwSetFramebufferSizeCallback(window, framebufferSizeCallback);
 
-    if (!gladLoadGLLoader((GLADloadproc) glfwGetProcAddress)) {
+    if (!gladLoadGLLoader(reinterpret_cast<GLADloadproc>(glfwGetProcAddress))) {
         printf("Failed to initialize GLAD\n");
         return -1;
     }
@@ -173,88 +172,20 @@ int main() {
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
-    const GLuint modelVertexShader = generateShader("shaders/modelVertex.vs", GL_VERTEX_SHADER);
-    const GLuint fragmentShader = generateShader("shaders/fragment.fs", GL_FRAGMENT_SHADER);
-    const GLuint litShader = generateShader("shaders/litShader.fs", GL_FRAGMENT_SHADER);
-    const GLuint textureShader = generateShader("shaders/texture.fs", GL_FRAGMENT_SHADER);
-    const GLuint edgeDetectionShader = generateShader("shaders/edgeDetection.fs", GL_FRAGMENT_SHADER);
-    const GLuint colorInversionShader = generateShader("shaders/colorInversion.fs", GL_FRAGMENT_SHADER);
-    const GLuint pixelationShader = generateShader("shaders/pixelation.fs", GL_FRAGMENT_SHADER);
-
-    int success;
-    char infoLog[512];
-    const unsigned int modelShaderProgram = glCreateProgram();
-    glAttachShader(modelShaderProgram, modelVertexShader);
-    glAttachShader(modelShaderProgram, fragmentShader);
-    glLinkProgram(modelShaderProgram);
-    glGetProgramiv(modelShaderProgram, GL_LINK_STATUS, &success);
-    if (!success) {
-        glGetProgramInfoLog(modelShaderProgram, 512, NULL, infoLog);
-        printf("Error! Making Shader Program: %s\n", infoLog);
-    }
-    const unsigned int textureShaderProgram = glCreateProgram();
-    glAttachShader(textureShaderProgram, modelVertexShader);
-    glAttachShader(textureShaderProgram, textureShader);
-    glLinkProgram(textureShaderProgram);
-    glGetProgramiv(textureShaderProgram, GL_LINK_STATUS, &success);
-    if (!success) {
-        glGetProgramInfoLog(textureShaderProgram, 512, NULL, infoLog);
-        printf("Error! Making Shader Program: %s\n", infoLog);
-    }
-    const unsigned int litShaderProgram = glCreateProgram();
-    glAttachShader(litShaderProgram, modelVertexShader);
-    glAttachShader(litShaderProgram, litShader);
-    glLinkProgram(litShaderProgram);
-    glGetProgramiv(litShaderProgram, GL_LINK_STATUS, &success);
-    if (!success) {
-        glGetProgramInfoLog(litShaderProgram, 512, NULL, infoLog);
-        printf("Error! Making Shader Program: %s\n", infoLog);
-    }
-
-    const unsigned int edgeDetectionShaderProgram = glCreateProgram();
-    glAttachShader(edgeDetectionShaderProgram, modelVertexShader);
-    glAttachShader(edgeDetectionShaderProgram, edgeDetectionShader);
-    glLinkProgram(edgeDetectionShaderProgram);
-    glGetProgramiv(edgeDetectionShaderProgram, GL_LINK_STATUS, &success);
-    if (!success) {
-        glGetProgramInfoLog(edgeDetectionShaderProgram, 512, NULL, infoLog);
-        printf("Error! Making Shader Program: %s\n", infoLog);
-    }
-    const unsigned int colorInversionShaderProgram = glCreateProgram();
-    glAttachShader(colorInversionShaderProgram, modelVertexShader);
-    glAttachShader(colorInversionShaderProgram, colorInversionShader);
-    glLinkProgram(colorInversionShaderProgram);
-    glGetProgramiv(colorInversionShaderProgram, GL_LINK_STATUS, &success);
-    if (!success) {
-        glGetProgramInfoLog(colorInversionShaderProgram, 512, NULL, infoLog);
-        printf("Error! Making Shader Program: %s\n", infoLog);
-    }
-    const unsigned int pixelationShaderProgram = glCreateProgram();
-    glAttachShader(pixelationShaderProgram, modelVertexShader);
-    glAttachShader(pixelationShaderProgram, pixelationShader);
-    glLinkProgram(pixelationShaderProgram);
-    glGetProgramiv(pixelationShaderProgram, GL_LINK_STATUS, &success);
-    if (!success) {
-        glGetProgramInfoLog(pixelationShaderProgram, 512, NULL, infoLog);
-        printf("Error! Making Shader Program: %s\n", infoLog);
-    }
-
-    glDeleteShader(modelVertexShader);
-    glDeleteShader(fragmentShader);
-    glDeleteShader(textureShader);
-    glDeleteShader(litShader);
-    glDeleteShader(edgeDetectionShader);
-    glDeleteShader(colorInversionShader);
-    glDeleteShader(pixelationShader);
-
     // core::Mesh quad = core::Mesh::generateQuad();
     // core::Model quadModel({quad});
     // quadModel.translate(glm::vec3(0,0,-2.5));
     // quadModel.scale(glm::vec3(5, 5, 1));
 
-    GameObject edgeDetectionQuad(core::Model({core::Mesh::generateQuad()}), edgeDetectionShaderProgram);
-    GameObject colorInversionQuad(core::Model({core::Mesh::generateQuad()}), colorInversionShaderProgram);
-    GameObject pixelationQuad(core::Model({core::Mesh::generateQuad()}), pixelationShaderProgram);
+    Shader edgeDetectionShader("shaders/modelVertex.vs", "shaders/edgeDetection.fs");
+    Shader colorInversionShader("shaders/modelVertex.vs", "shaders/colorInversion.fs");
+    Shader pixelationShader("shaders/modelVertex.vs", "shaders/pixelation.fs");
+    Shader litShader("shaders/modelVertex.vs", "shaders/litShader.fs");
+    Shader modelShader("shaders/modelVertex.vs", "shaders/fragment.fs");
+
+    GameObject edgeDetectionQuad(core::Model({core::Mesh::generateQuad()}), edgeDetectionShader.ID);
+    GameObject colorInversionQuad(core::Model({core::Mesh::generateQuad()}), colorInversionShader.ID);
+    GameObject pixelationQuad(core::Model({core::Mesh::generateQuad()}), pixelationShader.ID);
     edgeDetectionQuad.useTexture = false;
     colorInversionQuad.useTexture = false;
     pixelationQuad.useTexture = false;
@@ -263,33 +194,31 @@ int main() {
 
     core::Texture grassTexture = core::Texture("textures/grass_texture.jpg");
 
-    GameObject suzanne(core::AssimpLoader::loadModel("models/nonormalmonkey.obj"), litShaderProgram);
+    GameObject suzanne(core::AssimpLoader::loadModel("models/nonormalmonkey.obj"), litShader.ID);
     suzanne.transform.position = glm::vec3(0,0.5f,0);
 
-    GameObject suzanne1(core::AssimpLoader::loadModel("models/nonormalmonkey.obj"), litShaderProgram);
+    GameObject suzanne1(core::AssimpLoader::loadModel("models/nonormalmonkey.obj"), litShader.ID);
     suzanne1.transform.position = glm::vec3(0,0.5f,18.0f);
     suzanne1.transform.rotation = glm::vec3(0,30.0f,10.0f);
 
-    GameObject suzanne2(core::AssimpLoader::loadModel("models/nonormalmonkey.obj"), litShaderProgram);
+    GameObject suzanne2(core::AssimpLoader::loadModel("models/nonormalmonkey.obj"), litShader.ID);
     suzanne2.transform.position = glm::vec3(-3,0.5f,3.0f);
 
-    GameObject suzanne3(core::AssimpLoader::loadModel("models/nonormalmonkey.obj"), litShaderProgram);
+    GameObject suzanne3(core::AssimpLoader::loadModel("models/nonormalmonkey.obj"), litShader.ID);
     suzanne3.transform.position = glm::vec3(-7,0.5f,8.0f);
 
-    GameObject suzanne4(core::AssimpLoader::loadModel("models/nonormalmonkey.obj"), litShaderProgram);
+    GameObject suzanne4(core::AssimpLoader::loadModel("models/nonormalmonkey.obj"), litShader.ID);
     suzanne4.transform.position = glm::vec3(4,0.5f,12.0f);
 
     // GameObject car(core::AssimpLoader::loadModel("models/NissanS30.obj"), litShaderProgram);
     // car.transform.position = glm::vec3(0.0f,0.0f,-5.0f);
 
-    GameObject plane(core::AssimpLoader::loadModel("models/Plane.obj"), grassTexture, litShaderProgram);
+    GameObject plane(core::AssimpLoader::loadModel("models/Plane.obj"), grassTexture, litShader.ID);
     plane.transform.position = glm::vec3(0.0f,-5.0f,-5.0f);
     plane.transform.scale = glm::vec3(5.0f,1.0f,5.0f);
 
-    Light light(0,0,20, glm::vec4(1,1,1,1), 10, modelShaderProgram);
+    Light light(0,0,20, glm::vec4(1,1,1,1), 10, modelShader.ID);
     light.transform.scale *= 0.1;
-
-    lights.push_back(&light);
 
     scene.AddObject(&suzanne);
     scene.AddObject(&suzanne1);
@@ -315,7 +244,7 @@ int main() {
     unsigned int texture;
     glGenTextures(1, &texture);
     glBindTexture(GL_TEXTURE_2D, texture);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, g_width, g_height, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, g_width, g_height, 0, GL_RGB, GL_UNSIGNED_BYTE, nullptr);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
     glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, texture, 0);
@@ -335,7 +264,7 @@ int main() {
     unsigned int citexture;
     glGenTextures(1, &citexture);
     glBindTexture(GL_TEXTURE_2D, citexture);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, g_width, g_height, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, g_width, g_height, 0, GL_RGB, GL_UNSIGNED_BYTE, nullptr);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
     glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, citexture, 0);
@@ -355,7 +284,7 @@ int main() {
     unsigned int pixelationTexture;
     glGenTextures(1, &pixelationTexture);
     glBindTexture(GL_TEXTURE_2D, pixelationTexture);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, g_width, g_height, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, g_width, g_height, 0, GL_RGB, GL_UNSIGNED_BYTE, nullptr);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
     glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, pixelationTexture, 0);
@@ -379,47 +308,47 @@ int main() {
     glClearColor(clearColor.r,
                  clearColor.g, clearColor.b, clearColor.a);
 
-    GLint lightCountUniform = glGetUniformLocation(litShaderProgram, "lightCount");
+#pragma region Uniforms
+    GLint lightCountUniform = glGetUniformLocation(litShader.ID, "lightCount");
     GLint lightPosLocations[10];
     GLint lightColorLocations[10];
     GLint lightRadiusLocations[10];
 
-    for (int i = 0; i < lights.size(); i++) {
+    for (int i = 0; i < sceneManager.getCurrentScene()->GetLightCount(); i++) {
         std::string posName = "lights[" + std::to_string(i) + "].position";
         std::string colName = "lights[" + std::to_string(i) + "].color";
         std::string radName = "lights[" + std::to_string(i) + "].radius";
 
 
-        lightPosLocations[i] = glGetUniformLocation(litShaderProgram, posName.c_str());
-        lightColorLocations[i] = glGetUniformLocation(litShaderProgram, colName.c_str());
-        lightRadiusLocations[i] = glGetUniformLocation(litShaderProgram, radName.c_str());
+        lightPosLocations[i] = glGetUniformLocation(litShader.ID, posName.c_str());
+        lightColorLocations[i] = glGetUniformLocation(litShader.ID, colName.c_str());
+        lightRadiusLocations[i] = glGetUniformLocation(litShader.ID, radName.c_str());
     }
 
-    GLint mvpMatrixUniform = glGetUniformLocation(modelShaderProgram, "mvpMatrix");
-    GLint textureModelUniform = glGetUniformLocation(textureShaderProgram, "mvpMatrix");
-    GLint textureUniform = glGetUniformLocation(colorInversionShaderProgram, "text");
-    GLint pixelationTextureUniform = glGetUniformLocation(pixelationShaderProgram, "text");
-    GLint litMvpUniform = glGetUniformLocation(litShaderProgram, "mvpMatrix");
+    GLint litMvpUniform = glGetUniformLocation(litShader.ID, "mvpMatrix");
     //GLint lightDirUniform = glGetUniformLocation(litShaderProgram, "lightDirection");
 
     //ADS Uniforms
-    GLint lightColorUniform = glGetUniformLocation(litShaderProgram, "lightColor");
-    GLint ambientIntensityUniform = glGetUniformLocation(litShaderProgram, "ambientIntensity");
-    GLint ambientColorUniform = glGetUniformLocation(litShaderProgram, "ambientColor");
-    GLint diffuseColorUniform = glGetUniformLocation(litShaderProgram, "diffuseColor");
-    GLint speculaColorUniform = glGetUniformLocation(litShaderProgram, "speculaColor");
-    GLint specularIntensityUniform = glGetUniformLocation(litShaderProgram, "specularIntensity");
-    GLint cameraPosUniform = glGetUniformLocation(litShaderProgram, "cameraPos");
+    GLint lightColorUniform = glGetUniformLocation(litShader.ID, "lightColor");
+    GLint ambientIntensityUniform = glGetUniformLocation(litShader.ID, "ambientIntensity");
+    GLint ambientColorUniform = glGetUniformLocation(litShader.ID, "ambientColor");
+    GLint diffuseColorUniform = glGetUniformLocation(litShader.ID, "diffuseColor");
+    GLint speculaColorUniform = glGetUniformLocation(litShader.ID, "speculaColor");
+    GLint specularIntensityUniform = glGetUniformLocation(litShader.ID, "specularIntensity");
+    GLint cameraPosUniform = glGetUniformLocation(litShader.ID, "cameraPos");
 
-    GLint thicknessUniform = glGetUniformLocation(edgeDetectionShaderProgram, "thickness");
-    GLint clarityUniform = glGetUniformLocation(edgeDetectionShaderProgram, "clarity");
-
-    //Texture
-    GLint grassTextureUniform = glGetUniformLocation(litShaderProgram, "text");
+    GLint thicknessUniform = glGetUniformLocation(edgeDetectionShader.ID, "thickness");
+    GLint clarityUniform = glGetUniformLocation(edgeDetectionShader.ID, "clarity");
 
     //pixelation uniforms
-    GLint pixelSizeUniform = glGetUniformLocation(pixelationShaderProgram, "pixelSize");
-    GLint screenSize = glGetUniformLocation(pixelationShaderProgram, "screenSize");
+    GLint pixelSizeUniform = glGetUniformLocation(pixelationShader.ID, "pixelSize");
+    GLint screenSize = glGetUniformLocation(pixelationShader.ID, "screenSize");
+
+    GLint materialAmbientUniform = glGetUniformLocation(litShader.ID, "material.ambient");
+    GLint materialDiffuseUniform = glGetUniformLocation(litShader.ID, "material.diffuse");
+    GLint materialSpecularUniform = glGetUniformLocation(litShader.ID, "material.specular");
+
+#pragma endregion
 
     double currentTime = glfwGetTime();
     double finishFrameTime = 0.0;
@@ -451,10 +380,14 @@ int main() {
 
     bool showWireframe = false;
 
+    glm::vec3 materialAmbient = glm::vec3(1.0f, 0.5f, 0.31f);
+    glm::vec3 materialDiffuse = glm::vec3(1.0f, 0.5f, 0.31f);
+    glm::vec3 materialSpecular = glm::vec3(0.5f, 0.5f, 0.5f);
+
     while (!glfwWindowShouldClose(window)) {
         processInput(window);
 
-        glUniform2f(screenSize, g_width, g_height);
+        glUniform2f(screenSize, static_cast<float>(g_width), static_cast<float>(g_height));
 
         if (useEdgeDetection) {
             glBindFramebuffer(GL_FRAMEBUFFER, framebuffer);
@@ -476,7 +409,6 @@ int main() {
 
         suzanne.transform.rotation = glm::vec3(0,monkeyRot,0);
         light.setColor(lightColor);
-        //printf("%f,%f,%f", lightPos.x, lightPos.y, lightPos.z);
 
         // order is funny:
         Scene* currentScene = sceneManager.getCurrentScene();
@@ -493,7 +425,7 @@ int main() {
         glm::mat4 projection = camera.getProjectionMatrix();
 
         // This is ugly! (Fix it later with materials?)
-        glUseProgram(litShaderProgram);
+        litShader.Use();
         glUniformMatrix4fv(litMvpUniform, 1, GL_FALSE, glm::value_ptr(projection * view * suzanne.model.getModelMatrix()));
         //glUniform3f(lightDirUniform,1.0f,0.5f,0.0f);
 
@@ -516,25 +448,9 @@ int main() {
         //glUniform3f(cameraPosUniform, glm::vec3(camera.transform.position));
         glUniform3f(cameraPosUniform, camera.transform.position.x, camera.transform.position.y, camera.transform.position.z);
 
-        //glUniform3f(lightPosUniform,glm::vec3(light.transform.position));
-        // glUniform3f(lightPosUniform,light.transform.position.x, light.transform.position.y, light.transform.position.z);
-
-        // glUniformMatrix4fv(textureModelUniform, 1, GL_FALSE, glm::value_ptr(projection * view * quadModel.getModelMatrix()));
-        //  glActiveTexture(GL_TEXTURE0);
-        //  glUniform1i(textureUniform, 0);
-        //  glBindTexture(GL_TEXTURE_2D, cmgtGatoTexture.getId());
-        // quadModel.render();
-        //  glBindVertexArray(0);
-        //
-        // glUseProgram(textureShaderProgram);
-        // glUniformMatrix4fv(grassTextureUniform, 1, GL_FALSE, glm::value_ptr(projection * view * plane.model.getModelMatrix()));
-        // //  glUniformMatrix4fv(textureModelUniform, 1, GL_FALSE, glm::value_ptr(projection * view * quadModel.getModelMatrix()));
-        // glActiveTexture(GL_TEXTURE0);
-        // glUniform1i(grassTextureUniform, 0);
-        // glBindTexture(GL_TEXTURE_2D, grassTexture.getId());
-        // //quadModel.render();
-        // glBindVertexArray(0);
-        // glActiveTexture(GL_TEXTURE0);
+        glUniform3fv(materialAmbientUniform, 1, glm::value_ptr(materialAmbient));
+        glUniform3fv(materialDiffuseUniform, 1, glm::value_ptr(materialDiffuse));
+        glUniform3fv(materialSpecularUniform, 1, glm::value_ptr(materialSpecular));
 
         currentScene->Render();
 
@@ -542,7 +458,7 @@ int main() {
         if (useEdgeDetection) {
             glDisable(GL_DEPTH_TEST);
             glClear(GL_COLOR_BUFFER_BIT);
-            glUseProgram(edgeDetectionShaderProgram);
+            edgeDetectionShader.Use();
             glUniform1f(thicknessUniform, thickness);
             glUniform1f(clarityUniform, clarity);
             glActiveTexture(GL_TEXTURE0);
@@ -552,7 +468,7 @@ int main() {
         else if (useInvertColors) {
             glDisable(GL_DEPTH_TEST);
             glClear(GL_COLOR_BUFFER_BIT);
-            glUseProgram(colorInversionShaderProgram);
+            glUseProgram(colorInversionShader.ID);
             glActiveTexture(GL_TEXTURE0);
             glBindTexture(GL_TEXTURE_2D, citexture);
             colorInversionQuad.Render(glm::mat4(1.0f));
@@ -561,7 +477,7 @@ int main() {
         {
             glDisable(GL_DEPTH_TEST);
             glClear(GL_COLOR_BUFFER_BIT);
-            glUseProgram(pixelationShaderProgram);
+            glUseProgram(pixelationShader.ID);
             glUniform1f(pixelSizeUniform, pixelSize);
             glActiveTexture(GL_TEXTURE0);
             glBindTexture(GL_TEXTURE_2D, pixelationTexture);
@@ -633,22 +549,21 @@ int main() {
 
         if (ImGui::Button("Add Light") && currentScene->GetLightCount() < 10) {
 
-            auto newLight = new Light(newLightPos.x,newLightPos.y,newLightPos.z, newLightColor, newLightRadius, modelShaderProgram);
-            lights.push_back(newLight);
+            auto newLight = new Light(newLightPos.x,newLightPos.y,newLightPos.z, newLightColor, newLightRadius, modelShader.ID);
             currentScene->AddLight(newLight);
             currentScene->AddObject(newLight);
 
             newLight->transform.scale *= 0.1;
 
-            for (int i = 0; i < lights.size(); i++) {
+            for (int i = 0; i < currentScene->GetLightCount(); i++) {
                 std::string posName = "lights[" + std::to_string(i) + "].position";
                 std::string colName = "lights[" + std::to_string(i) + "].color";
                 std::string radName = "lights[" + std::to_string(i) + "].radius";
 
 
-                lightPosLocations[i] = glGetUniformLocation(litShaderProgram, posName.c_str());
-                lightColorLocations[i] = glGetUniformLocation(litShaderProgram, colName.c_str());
-                lightRadiusLocations[i] = glGetUniformLocation(litShaderProgram, radName.c_str());
+                lightPosLocations[i] = glGetUniformLocation(litShader.ID, posName.c_str());
+                lightColorLocations[i] = glGetUniformLocation(litShader.ID, colName.c_str());
+                lightRadiusLocations[i] = glGetUniformLocation(litShader.ID, radName.c_str());
             }
 
             printf("Light was added \n");
@@ -664,6 +579,12 @@ int main() {
         //ImGui::SliderFloat3("Camera rotation", rotations, 0.0f, 360.0f);
         ImGui::End();
 
+        ImGui::Begin("Material Settings");
+        ImGui::ColorEdit3("Ambient Color", &materialAmbient[0]);
+        ImGui::ColorEdit3("Diffuse Color", &materialDiffuse[0]);
+        ImGui::ColorEdit3("Specular Color", &materialSpecular[0]);
+        ImGui::End();
+
         ImGui::Render();
         ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 
@@ -677,7 +598,7 @@ int main() {
         currentTime = finishFrameTime;
     }
 
-    glDeleteProgram(modelShaderProgram);
+    glDeleteProgram(modelShader.ID);
     ImGui_ImplOpenGL3_Shutdown();
     ImGui_ImplGlfw_Shutdown();
     ImGui::DestroyContext();

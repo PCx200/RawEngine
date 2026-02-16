@@ -5,6 +5,14 @@ struct Light{
     float radius;
 };
 
+struct Material{
+    vec3 ambient;
+    vec3 diffuse;
+    vec3 specular;
+};
+
+uniform Material material;
+
 uniform int lightCount;
 uniform Light lights[10];
 
@@ -25,13 +33,10 @@ in vec2 uv;
 
 void main()
 {
-//FragColor=vec4(1,0,1,1);
-    // just debug:
-    //FragColor = vec4(lightDir,1); // TODO: light calculations (at least diffuse )
     vec3 normal = normalize(fNor);
     vec3 viewDir = normalize(cameraPos - fPos);
 
-    vec3 result = ambientIntensity * ambientColor;
+    vec3 result = ambientIntensity * ambientColor * material.ambient;
 
     for(int i = 0; i < lightCount ; i++)
     {
@@ -47,9 +52,9 @@ void main()
         float attenuation = clamp(1.0 - dist / radius, 0.0, 1.0);
         //vec3 ambient = ambientIntensity * ambientColor;
 
-        vec3 diffuse = max(dot(lightDir, normal), 0) * vec3(lights[i].color) * diffuseColor;
+        vec3 diffuse = max(dot(lightDir, normal), 0) * vec3(lights[i].color) * diffuseColor * material.diffuse;
 
-        vec3 specular = pow(max(dot(normal, halfwayDir), 0), specularIntensity) * speculaColor;
+        vec3 specular = pow(max(dot(normal, halfwayDir), 0), specularIntensity) * speculaColor * material.specular;
 
         result += attenuation * (diffuse + specular);
     }
