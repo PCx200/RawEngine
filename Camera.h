@@ -17,7 +17,7 @@ public:
     float fov = 45.0f;
     float aspect = 16.0f/ 9.0f;
     float nearPlane = 0.1f;
-    float farPlane = 100.0f;
+    float farPlane = 200.0f;
 
     bool firstMouse = true;
     float lastX = 0.0f;

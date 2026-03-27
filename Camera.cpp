@@ -56,23 +56,6 @@ void Camera::ProcessMovementInput(GLFWwindow *window, float deltaTime, float spe
     transform.Translate(direction * speed * deltaTime);
 }
 
-// void Camera::ProcessMouseInput(GLFWwindow *window, float deltaTime, float speed) {
-//
-//     if (glfwGetKey(window, GLFW_KEY_RIGHT) == GLFW_PRESS)
-//         transform.rotation.y += speed * deltaTime;
-//     if (glfwGetKey(window, GLFW_KEY_LEFT) == GLFW_PRESS)
-//         transform.rotation.y -= speed * deltaTime;
-//     if (glfwGetKey(window, GLFW_KEY_UP) == GLFW_PRESS)
-//         transform.rotation.x += speed * deltaTime;
-//     if (glfwGetKey(window, GLFW_KEY_DOWN) == GLFW_PRESS)
-//         transform.rotation.x -= speed * deltaTime;
-//
-//     if (transform.rotation.x > 89.0f)
-//         transform.rotation.x = 89.0f;
-//     if (transform.rotation.x < -89.0f)
-//         transform.rotation.x = -89.0f;
-// }
-
 void Camera::ProcessMouseMovement(float xoffset, float yoffset)
 {
     xoffset *= sensitivity;

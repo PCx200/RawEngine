@@ -9,6 +9,7 @@
 
 
 #include "Camera.h"
+#include "CubeCollider.h"
 #include "GameObject.h"
 #include "Light.h"
 #include "core/model.h"
@@ -18,6 +19,8 @@ class Scene {
 private:
     std::vector<GameObject*> objects;
     Camera* camera;
+
+    std::vector<CubeCollider*> colliders;
 
     std::vector<Light*> lights;
 
@@ -32,11 +35,15 @@ public:
 
     void AddObject(GameObject* object);
 
+    void AddCollider(CubeCollider* collider);
+
     void AddLight(Light* light);
 
     int GetLightCount();
 
     std::vector<Light*> GetLights();
+
+    std::vector<CubeCollider*> GetColliders();
 
     void Update(float deltaTime);
 

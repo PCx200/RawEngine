@@ -31,6 +31,8 @@ set(IMGUI_SOURCES
         Light.h
         Shader.cpp
         Shader.h
+        CubeCollider.cpp
+        CubeCollider.h
 )
 
 add_executable(RawEngine main.cpp

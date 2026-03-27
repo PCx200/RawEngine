@@ -21,6 +21,11 @@ void Scene::AddObject(GameObject *object) {
     objects.push_back(object);
 }
 
+void Scene::AddCollider(CubeCollider* collider)
+{
+    colliders.push_back(collider);
+}
+
 void Scene::AddLight(Light *light) {
     lights.push_back(light);
 }
@@ -31,6 +36,11 @@ int Scene::GetLightCount() {
 
 std::vector<Light *> Scene::GetLights() {
     return lights;
+}
+
+std::vector<CubeCollider*> Scene::GetColliders()
+{
+    return colliders;
 }
 
 void Scene::Update(float deltaTime) {
@@ -44,6 +54,10 @@ void Scene::Render() const {
     glm::mat4 VP = camera->getProjectionMatrix() * camera->getViewMatrix();
     for (int i = 0; i < objects.size(); i++) {
         objects[i]->Render(VP);
+    }
+    for (int i = 0; i < colliders.size(); i++)
+    {
+        colliders[i]->Render(VP);
     }
 }
 

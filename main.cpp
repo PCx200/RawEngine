@@ -8,6 +8,7 @@
 #include <iostream>
 
 #include "Camera.h"
+#include "CubeCollider.h"
 #include "GameObject.h"
 #include "Scene.h"
 #include "SceneManager.h"
@@ -35,12 +36,17 @@
 
 int g_width = 1600;
 int g_height = 900;
-Camera camera(0,0,10);
+
+int SEED = 0;
+
+Camera camera(25,15,80);
 
 SceneManager sceneManager;
 Scene scene("Sample Scene", &camera);
 Scene scene1("Scene2", &camera);
 Scene scene2("Scene3", &camera);
+
+Scene collision_detection_scene("Collision Detection Scene", &camera);
 
 //Camera camera1(70, g_width/g_height, 0.1f, 200.0f);
 GLFWcursor* cursor = glfwCreateStandardCursor(GLFW_ARROW_CURSOR);
@@ -131,9 +137,10 @@ int main() {
     glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
 #endif
 
-    sceneManager.AddScene(&scene);
-    sceneManager.AddScene(&scene1);
-    sceneManager.AddScene(&scene2);
+    // sceneManager.AddScene(&scene);
+    // sceneManager.AddScene(&scene1);
+    // sceneManager.AddScene(&scene2);
+    sceneManager.AddScene(&collision_detection_scene);
 
 
     //camera.transform.position = glm::vec3(0, 0, 10);
@@ -182,6 +189,7 @@ int main() {
     Shader pixelationShader("shaders/modelVertex.vs", "shaders/pixelation.fs");
     Shader litShader("shaders/modelVertex.vs", "shaders/litShader.fs");
     Shader modelShader("shaders/modelVertex.vs", "shaders/fragment.fs");
+    Shader colliderShader("shaders/collider.vs", "shaders/collider.fs");
 
     GameObject edgeDetectionQuad(core::Model({core::Mesh::generateQuad()}), edgeDetectionShader.ID);
     GameObject colorInversionQuad(core::Model({core::Mesh::generateQuad()}), colorInversionShader.ID);
@@ -210,7 +218,7 @@ int main() {
     GameObject suzanne4(core::AssimpLoader::loadModel("models/nonormalmonkey.obj"), litShader.ID);
     suzanne4.transform.position = glm::vec3(4,0.5f,12.0f);
 
-    // GameObject car(core::AssimpLoader::loadModel("models/NissanS30.obj"), litShaderProgram);
+    // GameObject car(core::AssimpLoader::loadModel("models/NissanS30.obj"), litShader.ID);
     // car.transform.position = glm::vec3(0.0f,0.0f,-5.0f);
 
     GameObject plane(core::AssimpLoader::loadModel("models/Plane.obj"), grassTexture, litShader.ID);
@@ -219,6 +227,40 @@ int main() {
 
     Light light(0,0,20, glm::vec4(1,1,1,1), 10, modelShader.ID);
     light.transform.scale *= 0.1;
+
+    SEED = time(nullptr) ^ (uintptr_t)&SEED;
+    srand(SEED);
+
+    printf("Seed: %i\n", SEED);
+
+    int cube_count = 100;
+    std::vector<glm::vec3> speeds;
+
+    for (int i = 0; i < cube_count; ++i)
+    {
+        float xPos = static_cast<float>(rand()) / RAND_MAX * 50.0f;
+        float yPos = static_cast<float>(rand()) / RAND_MAX * 25.0f;
+        float zPos = static_cast<float>(rand()) / RAND_MAX * 50.0f;
+
+        float xRot = static_cast<float>(rand()) / RAND_MAX * 180.0f;
+        float yRot = static_cast<float>(rand()) / RAND_MAX * 180.0f;
+        float zRot = static_cast<float>(rand()) / RAND_MAX * 180.0f;
+
+        float size = static_cast<float>(rand()) / RAND_MAX * 2.0f + 1.0f;
+
+        auto* collider = new CubeCollider(glm::vec3(xPos, yPos, zPos), glm::vec3(xRot,yRot,zRot), size, colliderShader.ID);
+        collision_detection_scene.AddCollider(collider);
+
+        // printf("Collider%i with position: x:%f y:%f z:%f \n", i + 1,
+        //     collider->get_OBB().center.x, collider->get_OBB().center.y, collider->get_OBB().center.z);
+
+        //collider->get_OBB().axes[0], collider->get_OBB().axes[1], collider->get_OBB().axes[2] // rotation wrong
+
+        //float speed = static_cast<float>(rand()) / RAND_MAX * 2.0f - 1.0f;
+        //speeds.push_back(glm::vec3(speed));
+    }
+
+
 
     scene.AddObject(&suzanne);
     scene.AddObject(&suzanne1);
@@ -235,6 +277,8 @@ int main() {
     scene2.AddObject(&light);
     //scene2.AddObject(&car);
     scene2.AddObject(&plane);
+
+
 
     //edge detection buffers
     unsigned int framebuffer;
@@ -309,45 +353,7 @@ int main() {
                  clearColor.g, clearColor.b, clearColor.a);
 
 #pragma region Uniforms
-    GLint lightCountUniform = glGetUniformLocation(litShader.ID, "lightCount");
-    GLint lightPosLocations[10];
-    GLint lightColorLocations[10];
-    GLint lightRadiusLocations[10];
-
-    for (int i = 0; i < sceneManager.getCurrentScene()->GetLightCount(); i++) {
-        std::string posName = "lights[" + std::to_string(i) + "].position";
-        std::string colName = "lights[" + std::to_string(i) + "].color";
-        std::string radName = "lights[" + std::to_string(i) + "].radius";
-
-
-        lightPosLocations[i] = glGetUniformLocation(litShader.ID, posName.c_str());
-        lightColorLocations[i] = glGetUniformLocation(litShader.ID, colName.c_str());
-        lightRadiusLocations[i] = glGetUniformLocation(litShader.ID, radName.c_str());
-    }
-
-    GLint litMvpUniform = glGetUniformLocation(litShader.ID, "mvpMatrix");
-    //GLint lightDirUniform = glGetUniformLocation(litShaderProgram, "lightDirection");
-
-    //ADS Uniforms
-    GLint lightColorUniform = glGetUniformLocation(litShader.ID, "lightColor");
-    GLint ambientIntensityUniform = glGetUniformLocation(litShader.ID, "ambientIntensity");
-    GLint ambientColorUniform = glGetUniformLocation(litShader.ID, "ambientColor");
-    GLint diffuseColorUniform = glGetUniformLocation(litShader.ID, "diffuseColor");
-    GLint speculaColorUniform = glGetUniformLocation(litShader.ID, "speculaColor");
-    GLint specularIntensityUniform = glGetUniformLocation(litShader.ID, "specularIntensity");
     GLint cameraPosUniform = glGetUniformLocation(litShader.ID, "cameraPos");
-
-    GLint thicknessUniform = glGetUniformLocation(edgeDetectionShader.ID, "thickness");
-    GLint clarityUniform = glGetUniformLocation(edgeDetectionShader.ID, "clarity");
-
-    //pixelation uniforms
-    GLint pixelSizeUniform = glGetUniformLocation(pixelationShader.ID, "pixelSize");
-    GLint screenSize = glGetUniformLocation(pixelationShader.ID, "screenSize");
-
-    GLint materialAmbientUniform = glGetUniformLocation(litShader.ID, "material.ambient");
-    GLint materialDiffuseUniform = glGetUniformLocation(litShader.ID, "material.diffuse");
-    GLint materialSpecularUniform = glGetUniformLocation(litShader.ID, "material.specular");
-
 #pragma endregion
 
     double currentTime = glfwGetTime();
@@ -387,7 +393,7 @@ int main() {
     while (!glfwWindowShouldClose(window)) {
         processInput(window);
 
-        glUniform2f(screenSize, static_cast<float>(g_width), static_cast<float>(g_height));
+        glfwSwapInterval(0); //VSYNC 1=on 0=off
 
         if (useEdgeDetection) {
             glBindFramebuffer(GL_FRAMEBUFFER, framebuffer);
@@ -410,7 +416,6 @@ int main() {
         suzanne.transform.rotation = glm::vec3(0,monkeyRot,0);
         light.setColor(lightColor);
 
-        // order is funny:
         Scene* currentScene = sceneManager.getCurrentScene();
         currentScene->Update(deltaTime);
 
@@ -424,43 +429,55 @@ int main() {
         glm::mat4 view = camera.getViewMatrix();
         glm::mat4 projection = camera.getProjectionMatrix();
 
-        // This is ugly! (Fix it later with materials?)
         litShader.Use();
-        glUniformMatrix4fv(litMvpUniform, 1, GL_FALSE, glm::value_ptr(projection * view * suzanne.model.getModelMatrix()));
+
+        //Take a look
+        //litShader.setMat4("mvpMatrix", projection * view * suzanne.model.getModelMatrix());
+        //glUniformMatrix4fv(litMvpUniform, 1, GL_FALSE, glm::value_ptr(projection * view * suzanne.model.getModelMatrix()));
         //glUniform3f(lightDirUniform,1.0f,0.5f,0.0f);
 
-        glUniform1f(ambientIntensityUniform, ambientIntensity);
-        glUniform4fv(lightColorUniform, 1, &light.getColor()[0]);
+        litShader.setFloat("ambientIntensity", ambientIntensity);
+        litShader.setVec4("lightColor", lightColor);
 
-        glUniform1i(lightCountUniform, currentScene->GetLightCount());
+        litShader.setInt("lightCount", currentScene->GetLightCount());
 
         for (int i = 0; i < currentScene->GetLightCount(); i++)
         {
-            glUniform3fv(lightPosLocations[i], 1, glm::value_ptr(currentScene->GetLights()[i]->transform.position));
-            glUniform4fv(lightColorLocations[i], 1, glm::value_ptr(currentScene->GetLights()[i]->getColor()));
-            glUniform1f(lightRadiusLocations[i], currentScene->GetLights()[i]->radius);
+            litShader.setVec3("lights[" + std::to_string(i) + "].position", currentScene->GetLights()[i]->transform.position);
+            litShader.setVec4("lights[" + std::to_string(i) + "].color", currentScene->GetLights()[i]->getColor());
+            litShader.setFloat("lights[" + std::to_string(i) + "].radius",currentScene->GetLights()[i]->radius);
         }
+        litShader.setVec3("ambientColor", ambientColor);
+        litShader.setVec3("diffuseColor", diffuseColor);
+        litShader.setVec3("speculaColor", specularColor);
+        litShader.setFloat("specularIntensity", specularPower);
 
-        glUniform3fv(ambientColorUniform, 1, glm::value_ptr(ambientColor));
-        glUniform3fv(diffuseColorUniform, 1, glm::value_ptr(diffuseColor));
-        glUniform3fv(speculaColorUniform, 1, glm::value_ptr(specularColor));
-        glUniform1f(specularIntensityUniform, specularPower);
-        //glUniform3f(cameraPosUniform, glm::vec3(camera.transform.position));
         glUniform3f(cameraPosUniform, camera.transform.position.x, camera.transform.position.y, camera.transform.position.z);
 
-        glUniform3fv(materialAmbientUniform, 1, glm::value_ptr(materialAmbient));
-        glUniform3fv(materialDiffuseUniform, 1, glm::value_ptr(materialDiffuse));
-        glUniform3fv(materialSpecularUniform, 1, glm::value_ptr(materialSpecular));
+        litShader.setVec3("material.ambient", materialAmbient);
+        litShader.setVec3("material.diffuse", materialDiffuse);
+        litShader.setVec3("material.specular", materialSpecular);
 
+        colliderShader.Use();
         currentScene->Render();
+
+        // for (int i = 0; i < currentScene->GetColliders().size(); i++)
+        // {
+        //     currentScene->GetColliders()[i]->transform.Translate(speeds[i] * deltaTime);
+        // }
+
+        // for (auto collider : currentScene->GetColliders())
+        // {
+        //     collider->transform.Translate(speeds[] * deltaTime);
+        // }
 
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
         if (useEdgeDetection) {
             glDisable(GL_DEPTH_TEST);
             glClear(GL_COLOR_BUFFER_BIT);
             edgeDetectionShader.Use();
-            glUniform1f(thicknessUniform, thickness);
-            glUniform1f(clarityUniform, clarity);
+            edgeDetectionShader.setFloat("thickness", thickness);
+            edgeDetectionShader.setFloat("clarity", clarity);
             glActiveTexture(GL_TEXTURE0);
             glBindTexture(GL_TEXTURE_2D, texture);
             edgeDetectionQuad.Render(glm::mat4(1.0f));
@@ -468,7 +485,7 @@ int main() {
         else if (useInvertColors) {
             glDisable(GL_DEPTH_TEST);
             glClear(GL_COLOR_BUFFER_BIT);
-            glUseProgram(colorInversionShader.ID);
+            colorInversionShader.Use();
             glActiveTexture(GL_TEXTURE0);
             glBindTexture(GL_TEXTURE_2D, citexture);
             colorInversionQuad.Render(glm::mat4(1.0f));
@@ -477,8 +494,9 @@ int main() {
         {
             glDisable(GL_DEPTH_TEST);
             glClear(GL_COLOR_BUFFER_BIT);
-            glUseProgram(pixelationShader.ID);
-            glUniform1f(pixelSizeUniform, pixelSize);
+            pixelationShader.Use();
+            pixelationShader.setFloat("pixelSize", pixelSize);
+            pixelationShader.setVec2("screenSize", glm::vec2(static_cast<float>(g_width), static_cast<float>(g_height)));
             glActiveTexture(GL_TEXTURE0);
             glBindTexture(GL_TEXTURE_2D, pixelationTexture);
             pixelationQuad.Render(glm::mat4(1.0f));
@@ -531,11 +549,12 @@ int main() {
         if (ImGui::Button("Previous Scene")) {
             sceneManager.PreviousScene();
         };
+        ImGui::Text("Seed: %i", SEED);
         ImGui::Text("FPS: %.1f", ImGui::GetIO().Framerate);
         ImGui::End();
 
         ImGui::Begin("Camera Settings");
-        ImGui::SliderFloat("Camera Speed", &cameraSpeed, 1.0f, 10.0f);
+        ImGui::SliderFloat("Camera Speed", &cameraSpeed, 1.0f, 30.0f);
         ImGui::SliderFloat("Camera Rotation Speed", &cameraRotationSpeed, 1.0f, 100.0f);
         ImGui::SliderFloat("Camera FOV", &cameraFOV, 20.0f, 120.0f);
         ImGui::SliderFloat("Monkey Rot", &monkeyRot, 0.0f, 360.0f);
@@ -556,14 +575,9 @@ int main() {
             newLight->transform.scale *= 0.1;
 
             for (int i = 0; i < currentScene->GetLightCount(); i++) {
-                std::string posName = "lights[" + std::to_string(i) + "].position";
-                std::string colName = "lights[" + std::to_string(i) + "].color";
-                std::string radName = "lights[" + std::to_string(i) + "].radius";
-
-
-                lightPosLocations[i] = glGetUniformLocation(litShader.ID, posName.c_str());
-                lightColorLocations[i] = glGetUniformLocation(litShader.ID, colName.c_str());
-                lightRadiusLocations[i] = glGetUniformLocation(litShader.ID, radName.c_str());
+                litShader.setVec3("lights[" + std::to_string(i) + "].position", currentScene->GetLights()[i]->transform.position);
+                litShader.setVec4("lights[" + std::to_string(i) + "].color", currentScene->GetLights()[i]->getColor());
+                litShader.setFloat("lights[" + std::to_string(i) + "].radius",currentScene->GetLights()[i]->radius);
             }
 
             printf("Light was added \n");
