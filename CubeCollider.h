@@ -22,6 +22,7 @@ class CubeCollider
 
     public:
         const GLuint shaderProgramID;
+        bool is_intersecting;
         float size;
         Transform transform;
 
@@ -32,8 +33,8 @@ class CubeCollider
 
         static void init();
 
-        bool is_colliding(CubeCollider& other);
         OBB get_OBB() const;
+        bool intersects(const CubeCollider& other);
         void Render(const glm::mat4& viewProj);
 };
 

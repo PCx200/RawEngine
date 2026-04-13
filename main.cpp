@@ -233,7 +233,7 @@ int main() {
 
     printf("Seed: %i\n", SEED);
 
-    int cube_count = 100;
+    int cube_count = 200;
     std::vector<glm::vec3> speeds;
 
     for (int i = 0; i < cube_count; ++i)
@@ -251,13 +251,19 @@ int main() {
         auto* collider = new CubeCollider(glm::vec3(xPos, yPos, zPos), glm::vec3(xRot,yRot,zRot), size, colliderShader.ID);
         collision_detection_scene.AddCollider(collider);
 
-        // printf("Collider%i with position: x:%f y:%f z:%f \n", i + 1,
-        //     collider->get_OBB().center.x, collider->get_OBB().center.y, collider->get_OBB().center.z);
+        float speed = static_cast<float>(rand()) / RAND_MAX * 2.0f - 1.0f;
+        speeds.push_back(glm::vec3(speed));
+    }
 
-        //collider->get_OBB().axes[0], collider->get_OBB().axes[1], collider->get_OBB().axes[2] // rotation wrong
-
-        //float speed = static_cast<float>(rand()) / RAND_MAX * 2.0f - 1.0f;
-        //speeds.push_back(glm::vec3(speed));
+    for (int i = 0; i < cube_count; i++)
+    {
+        for (int j = i + 1; j < cube_count; j++)
+        {
+            if (collision_detection_scene.GetColliders()[i]->intersects(*collision_detection_scene.GetColliders()[j]))
+            {
+                printf("[Collider %i] [Collider %i]", i, j);
+            }
+        }
     }
 
 
@@ -425,6 +431,22 @@ int main() {
 
         suzanne1.transform.Rotate(glm::vec3(0,1,0), 360 * deltaTime);
 
+        for (auto* c : collision_detection_scene.GetColliders())
+            c->is_intersecting = false;
+
+        for (int i = 0; i < cube_count; i++)
+        {
+            for (int j = i + 1; j < cube_count; j++)
+            {
+                if (collision_detection_scene.GetColliders()[i]->intersects(*collision_detection_scene.GetColliders()[j]))
+                {
+                    collision_detection_scene.GetColliders()[i]->is_intersecting = true;
+                    collision_detection_scene.GetColliders()[j]->is_intersecting = true;
+                    //printf("[Collider %i] [Collider %i]", i, j);
+                }
+            }
+        }
+
         //VP
         glm::mat4 view = camera.getViewMatrix();
         glm::mat4 projection = camera.getProjectionMatrix();
@@ -461,10 +483,10 @@ int main() {
         colliderShader.Use();
         currentScene->Render();
 
-        // for (int i = 0; i < currentScene->GetColliders().size(); i++)
-        // {
-        //     currentScene->GetColliders()[i]->transform.Translate(speeds[i] * deltaTime);
-        // }
+        for (int i = 0; i < currentScene->GetColliders().size(); i++)
+        {
+            currentScene->GetColliders()[i]->transform.Translate(speeds[i] * deltaTime);
+        }
 
         // for (auto collider : currentScene->GetColliders())
         // {
@@ -516,6 +538,14 @@ int main() {
         ImGui_ImplOpenGL3_NewFrame();
         ImGui_ImplGlfw_NewFrame();
         ImGui::NewFrame();
+
+        ImGui::Begin("Easy Collision Check");
+        ImGui::SliderFloat3("Cube1 Position", glm::value_ptr(collision_detection_scene.GetColliders()[0]->transform.position), 1.0f, 100.0f);
+        ImGui::SliderFloat3("Cube1 Rotation", glm::value_ptr(collision_detection_scene.GetColliders()[0]->transform.rotation), 1.0f, 180.0f);
+
+        ImGui::SliderFloat3("Cube2 Position", glm::value_ptr(collision_detection_scene.GetColliders()[1]->transform.position), 1.0f, 100.0f);
+        ImGui::SliderFloat3("Cube2 Rotation", glm::value_ptr(collision_detection_scene.GetColliders()[1]->transform.rotation), 1.0f, 180.0f);
+        ImGui::End();
 
         ImGui::Begin("Wireframe");
         if (ImGui::Checkbox("Enable Wireframe", &showWireframe)) {
