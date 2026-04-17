@@ -4,6 +4,8 @@
 
 #include "CubeCollider.h"
 #include <glad/glad.h>
+#include <glm/gtc/type_ptr.hpp>
+
 #include "Shader.h"
 
 GLuint CubeCollider::VAO = 0;
@@ -11,13 +13,13 @@ GLuint CubeCollider::VBO = 0;
 GLuint CubeCollider::EBO = 0;
 bool CubeCollider::initialised = false;
 
-CubeCollider::CubeCollider(GLuint shaderProgramID) : shaderProgramID(shaderProgramID)
+CubeCollider::CubeCollider(const Shader shader) : shader(shader)
 {
     if (!initialised)
         init();
 }
 
-CubeCollider::CubeCollider(glm::vec3 position, GLuint shaderProgramID) : shaderProgramID(shaderProgramID)
+CubeCollider::CubeCollider(glm::vec3 position, const Shader shader) : shader(shader)
 {
     transform.position = position;
 
@@ -25,7 +27,7 @@ CubeCollider::CubeCollider(glm::vec3 position, GLuint shaderProgramID) : shaderP
         init();
 }
 
-CubeCollider::CubeCollider(glm::vec3 position, glm::vec3 rotation, GLuint shaderProgramID) : shaderProgramID(shaderProgramID)
+CubeCollider::CubeCollider(glm::vec3 position, glm::vec3 rotation, const Shader shader) : shader(shader)
 {
     transform.position = position;
     transform.rotation = rotation;
@@ -34,7 +36,7 @@ CubeCollider::CubeCollider(glm::vec3 position, glm::vec3 rotation, GLuint shader
         init();
 }
 
-CubeCollider::CubeCollider(glm::vec3 position, glm::vec3 rotation, float size, GLuint shaderProgramID) : shaderProgramID(shaderProgramID)
+CubeCollider::CubeCollider(glm::vec3 position, glm::vec3 rotation, float size, const Shader shader) : shader(shader)
 {
     transform.position = position;
     transform.rotation = rotation;
@@ -226,14 +228,20 @@ bool CubeCollider::intersects(const CubeCollider& other)
 
 void CubeCollider::Render(const glm::mat4& viewProj)
 {
-    //glUseProgram(shaderProgramID);
-    glUniform1i(glGetUniformLocation(shaderProgramID, "intersects"), is_intersecting ? 1 : 0);
+    shader.Use();
 
+    if (is_intersecting)
+    {
+        shader.setVec3("color", glm::vec3(1,0,0));
+    }
+    else
+    {
+        shader.setVec3("color", glm::vec3(0,1,0));
+    }
     glm::mat4 model = transform.getMatrix();
     glm::mat4 mvp = viewProj * model;
 
-    GLuint mvpLoc = glGetUniformLocation(shaderProgramID, "mvp");
-    glUniformMatrix4fv(mvpLoc, 1, GL_FALSE, &mvp[0][0]);
+    shader.setMat4("mvp", mvp);
 
     glBindVertexArray(VAO);
     glDrawElements(GL_LINES, 24, GL_UNSIGNED_INT, 0);

@@ -5,6 +5,8 @@
 #ifndef RAWENGINE_CUBECOLLIDER_H
 #define RAWENGINE_CUBECOLLIDER_H
 #include <glad/glad.h>
+
+#include "Shader.h"
 #include "Transform.h"
 
 struct OBB
@@ -19,17 +21,20 @@ class CubeCollider
     private:
         static GLuint VAO, VBO, EBO;
         static bool initialised;
+        glm::vec3 color;
+
 
     public:
-        const GLuint shaderProgramID;
+        const Shader shader;
         bool is_intersecting;
         float size;
         Transform transform;
+        bool is_static;
 
-        CubeCollider(GLuint shaderProgramID);
-        CubeCollider(glm::vec3 position, GLuint shaderProgramID);
-        CubeCollider(glm::vec3 position, glm::vec3 rotation, GLuint shaderProgramID);
-        CubeCollider(glm::vec3 position, glm::vec3 rotation, float size, GLuint shaderProgramID);
+        CubeCollider(Shader shader);
+        CubeCollider(glm::vec3 position, Shader shader);
+        CubeCollider(glm::vec3 position, glm::vec3 rotation, Shader shader);
+        CubeCollider(glm::vec3 position, glm::vec3 rotation, float size, Shader shader);
 
         static void init();
 
