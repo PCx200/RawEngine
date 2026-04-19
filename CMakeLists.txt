@@ -33,6 +33,8 @@ set(IMGUI_SOURCES
         Shader.h
         CubeCollider.cpp
         CubeCollider.h
+        Octree.cpp
+        Octree.h
 )
 
 add_executable(RawEngine main.cpp

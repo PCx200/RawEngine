@@ -10,6 +10,7 @@
 #include "Camera.h"
 #include "CubeCollider.h"
 #include "GameObject.h"
+#include "Octree.h"
 #include "Scene.h"
 #include "SceneManager.h"
 #include "Shader.h"
@@ -39,7 +40,7 @@ int g_height = 1080;
 
 int SEED = 0;
 
-Camera camera(25,15,80);
+Camera camera(0,0,80);
 
 SceneManager sceneManager;
 Scene scene("Sample Scene", &camera);
@@ -94,6 +95,15 @@ void UpdateFPSRecording(int frames_to_record, float deltaTime)
     }
 }
 
+void AddCollider(std::vector<glm::vec3> &speeds, Shader colliderShader)
+{
+    float pos = static_cast<float>(rand()) / RAND_MAX * 50.0f - 25.0f;
+    CubeCollider* collider = new CubeCollider(glm::vec3(pos, 0, 0), glm::vec3(0,0,0), 1, colliderShader);
+    sceneManager.getCurrentScene()->AddCollider(collider);
+
+    float speed = static_cast<float>(rand()) / RAND_MAX * 2.0f - 1.0f;
+    speeds.emplace_back(speed);
+}
 #pragma region Callbacks
 
 void processInput(GLFWwindow *window) {
@@ -187,7 +197,7 @@ int main() {
     glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
 #endif
 
-    sceneManager.AddScene(&scene);
+    //sceneManager.AddScene(&scene);
 
     // sceneManager.AddScene(&scene1);
     // sceneManager.AddScene(&scene2);
@@ -230,11 +240,6 @@ int main() {
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
-    // core::Mesh quad = core::Mesh::generateQuad();
-    // core::Model quadModel({quad});
-    // quadModel.translate(glm::vec3(0,0,-2.5));
-    // quadModel.scale(glm::vec3(5, 5, 1));
-
 #pragma region Shaders
 
     Shader edgeDetectionShader("shaders/modelVertex.vs", "shaders/edgeDetection.fs");
@@ -274,9 +279,6 @@ int main() {
     GameObject suzanne4(core::AssimpLoader::loadModel("models/nonormalmonkey.obj"), litShader.ID);
     suzanne4.transform.position = glm::vec3(4,0.5f,12.0f);
 
-    // GameObject car(core::AssimpLoader::loadModel("models/NissanS30.obj"), litShader.ID);
-    // car.transform.position = glm::vec3(0.0f,0.0f,-5.0f);
-
     GameObject plane(core::AssimpLoader::loadModel("models/Plane.obj"), grassTexture, litShader.ID);
     plane.transform.position = glm::vec3(0.0f,-5.0f,-5.0f);
     plane.transform.scale = glm::vec3(5.0f,1.0f,5.0f);
@@ -302,26 +304,22 @@ int main() {
 
 #pragma endregion
 
-    CubeCollider col(glm::vec3(0.0f,0.0f,0.0f), colliderShader);
-    CubeCollider col1(glm::vec3(0.0f,0.0f,0.0f), colliderShader);
-    scene.AddCollider(&col);
-    scene.AddCollider(&col1);
 #pragma region Generate Cubes
 
     SEED = time(nullptr) ^ reinterpret_cast<uintptr_t>(&SEED);
-    srand(SEED);
+    srand(-316536522);
 
-    printf("Seed: %i\n", SEED);
+    printf("Seed: %i\n", -316536522);
 
-    int cube_count = 30;
+    int cube_count = 200;
     std::vector<glm::vec3> speeds;
 
 
     for (int i = 0; i < cube_count; i++)
     {
-        float xPos = static_cast<float>(rand()) / RAND_MAX * 50.0f;
-        float yPos = static_cast<float>(rand()) / RAND_MAX * 25.0f;
-        float zPos = static_cast<float>(rand()) / RAND_MAX * 50.0f;
+        float xPos = static_cast<float>(rand()) / RAND_MAX * 50.0f - 25.0f;
+        float yPos = static_cast<float>(rand()) / RAND_MAX * 25.0f - 12.5f;
+        float zPos = static_cast<float>(rand()) / RAND_MAX * 50.0f - 25.0f;
 
         float xRot = static_cast<float>(rand()) / RAND_MAX * 180.0f;
         float yRot = static_cast<float>(rand()) / RAND_MAX * 180.0f;
@@ -455,7 +453,17 @@ int main() {
     glm::vec3 materialSpecular = glm::vec3(0.5f, 0.5f, 0.5f);
 
     bool use_collision = true;
-    bool is_static = false;
+    bool use_octree = true;
+    bool is_static = true;
+
+    Octree* octree = new Octree(glm::vec3(0.0f,0.0f,0.0f), 30, 3, colliderShader);
+
+    for (auto collider : sceneManager.getCurrentScene()->GetColliders())
+    {
+        //if (collider == nullptr) continue;
+        collider->is_intersecting = false;
+        octree->insert(octree->root, collider);
+    }
 
 #pragma endregion
 
@@ -496,14 +504,15 @@ int main() {
 
         // suzanne1.transform.Rotate(glm::vec3(0,1,0), 360 * deltaTime);
 
-        for (int i = 0; i < currentScene->GetColliders().size(); i++)
-        {
-            if (currentScene->GetColliders()[i]->is_static == is_static) continue;
-            currentScene->GetColliders()[i]->transform.Translate(speeds[i] * deltaTime);
-            currentScene->GetColliders()[i]->transform.Rotate(glm::vec3(0,1,0), 100 * speeds[i].y * deltaTime);
-        }
+        // for (int i = 0; i < currentScene->GetColliders().size(); i++)
+        // {
+        //     if (currentScene->GetColliders()[i]->is_static == is_static) continue;
+        //
+        //     currentScene->GetColliders()[i]->transform.Translate(speeds[i] * deltaTime);
+        //     currentScene->GetColliders()[i]->transform.Rotate(glm::vec3(0,1,0), 100 * speeds[i].y * deltaTime);
+        // }
 
-        
+
         //VP
         glm::mat4 view = camera.getViewMatrix();
         glm::mat4 projection = camera.getProjectionMatrix();
@@ -534,7 +543,8 @@ int main() {
 
 #pragma region Collisions
 
-        if (use_collision)
+        //Naive Collision Detection
+        if (use_collision && !use_octree)
         {
             for (auto* c : currentScene->GetColliders())
                 c->is_intersecting = false;
@@ -550,6 +560,23 @@ int main() {
                     }
                 }
             }
+        }
+
+        //Octree Collision Detection
+        if (use_collision && use_octree)
+        {
+            octree->clear(octree->root);
+
+            for (auto* c : currentScene->GetColliders())
+            {
+                c->is_intersecting = false;
+                octree->insert(octree->root, c);
+            }
+
+
+
+            octree->check_collisions(octree->root);
+            //octree->render(octree->root, projection * view);
         }
 
 #pragma endregion
@@ -646,6 +673,7 @@ int main() {
         ImGui::Text("FPS: %.1f", 1.0f / deltaTime);
         ImGui::Text("Milliseconds per frame: %.3f", 1000.0f * deltaTime);
         ImGui::Text("Milliseconds: %.4f", deltaTime);
+        ImGui::Text("Cube Count: %i", currentScene->GetColliders().size());
         ImGui::End();
 
         ImGui::Begin("Tests");
@@ -654,8 +682,14 @@ int main() {
         };
         if (ImGui::Checkbox("Use Collision", &use_collision)) {
         }
+        if (ImGui::Checkbox("Use Octree", &use_octree)) {
+        }
         if (ImGui::Checkbox("Static Objects", &is_static)) {
         }
+        if (ImGui::Button("Add collider")) {
+            AddCollider(speeds,colliderShader);
+        }
+
         ImGui::End();
 
         ImGui::Begin("Camera Settings");
