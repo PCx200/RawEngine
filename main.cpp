@@ -54,6 +54,7 @@ GLFWcursor* cursor = glfwCreateStandardCursor(GLFW_ARROW_CURSOR);
 
 std::vector<float> fps_history;
 bool is_recording = false;
+double start_time = 0.0f;
 
 void SaveFPSHistoryToCSV(const std::string& filename)
 {
@@ -64,11 +65,11 @@ void SaveFPSHistoryToCSV(const std::string& filename)
         return;
     }
 
-    file << "FPS\n";
+    file << "FPS,Cubes\n";
 
     for (int i = 0; i < fps_history.size(); i++)
     {
-        file << fps_history[i] << "\n";
+        file << fps_history[i] << "," << sceneManager.getCurrentScene()->GetColliders().size() <<"\n";
     }
 
     file.close();
@@ -78,16 +79,17 @@ void SaveFPSHistoryToCSV(const std::string& filename)
 void StartFPSRecord()
 {
     fps_history.clear();
+    start_time = glfwGetTime();
     is_recording = true;
 }
 
-void UpdateFPSRecording(int frames_to_record, float deltaTime)
+void UpdateFPSRecording(double record_duration, float deltaTime)
 {
     if (!is_recording) return;
 
     fps_history.push_back(1.0f / deltaTime);
-
-    if (fps_history.size() >= frames_to_record)
+    double current_time = glfwGetTime();
+    if (current_time - start_time >= record_duration)
     {
         SaveFPSHistoryToCSV("fps_output.csv");
 
@@ -95,14 +97,32 @@ void UpdateFPSRecording(int frames_to_record, float deltaTime)
     }
 }
 
-void AddCollider(std::vector<glm::vec3> &speeds, Shader colliderShader)
+glm::vec3 GenerateRandomPosition(float region)
 {
-    float pos = static_cast<float>(rand()) / RAND_MAX * 50.0f - 25.0f;
-    CubeCollider* collider = new CubeCollider(glm::vec3(pos, 0, 0), glm::vec3(0,0,0), 1, colliderShader);
-    sceneManager.getCurrentScene()->AddCollider(collider);
+    float xPos = static_cast<float>(rand()) / RAND_MAX * region - region / 2.0f;
+    float yPos = static_cast<float>(rand()) / RAND_MAX * region / 2.0f - region / 4.0f;
+    float zPos = static_cast<float>(rand()) / RAND_MAX * region - region / 2.0f;
 
-    float speed = static_cast<float>(rand()) / RAND_MAX * 2.0f - 1.0f;
-    speeds.emplace_back(speed);
+    return {xPos, yPos, zPos};
+}
+
+void AddColliders(std::vector<glm::vec3> &speeds, Shader colliderShader, int count)
+{
+    for (int i = 0; i < count; i++)
+    {
+        glm::vec3 pos = GenerateRandomPosition(50);
+
+        float xRot = static_cast<float>(rand()) / RAND_MAX * 180.0f;
+        float yRot = static_cast<float>(rand()) / RAND_MAX * 180.0f;
+        float zRot = static_cast<float>(rand()) / RAND_MAX * 180.0f;
+
+        float size = static_cast<float>(rand()) / RAND_MAX * 2.0f + 1.0f;
+
+        auto* collider = new CubeCollider(pos, glm::vec3(xRot,yRot,zRot), size, colliderShader);
+        sceneManager.getCurrentScene()->AddCollider(collider);
+        float speed = static_cast<float>(rand()) / RAND_MAX * 2.0f - 1.0f;
+        speeds.emplace_back(speed);
+    }
 }
 #pragma region Callbacks
 
@@ -307,9 +327,9 @@ int main() {
 #pragma region Generate Cubes
 
     SEED = time(nullptr) ^ reinterpret_cast<uintptr_t>(&SEED);
-    srand(-316536522);
+    srand(-316536522); //-316536522
 
-    printf("Seed: %i\n", -316536522);
+    printf("Seed: %i\n", SEED);
 
     int cube_count = 200;
     std::vector<glm::vec3> speeds;
@@ -454,15 +474,18 @@ int main() {
 
     bool use_collision = true;
     bool use_octree = true;
+    bool display_octree = false;
+    bool use_loose_octree = false;
     bool is_static = true;
 
+    int dynamicallyAllocatedCollidersCount = 0;
     Octree* octree = new Octree(glm::vec3(0.0f,0.0f,0.0f), 30, 3, colliderShader);
 
     for (auto collider : sceneManager.getCurrentScene()->GetColliders())
     {
-        //if (collider == nullptr) continue;
+        if (collider == nullptr) continue;
         collider->is_intersecting = false;
-        octree->insert(octree->root, collider);
+        octree->loose_insert(octree->root, collider);
     }
 
 #pragma endregion
@@ -472,7 +495,7 @@ int main() {
 
         glfwSwapInterval(0); //VSYNC 1=on 0=off
 
-        UpdateFPSRecording(1000, deltaTime);
+        UpdateFPSRecording(10, deltaTime);
 
         if (useEdgeDetection) {
             glBindFramebuffer(GL_FRAMEBUFFER, framebuffer);
@@ -509,7 +532,7 @@ int main() {
         //     if (currentScene->GetColliders()[i]->is_static == is_static) continue;
         //
         //     currentScene->GetColliders()[i]->transform.Translate(speeds[i] * deltaTime);
-        //     currentScene->GetColliders()[i]->transform.Rotate(glm::vec3(0,1,0), 100 * speeds[i].y * deltaTime);
+        //     //currentScene->GetColliders()[i]->transform.Rotate(glm::vec3(0,1,0), 100 * speeds[i].y * deltaTime);
         // }
 
 
@@ -570,13 +593,14 @@ int main() {
             for (auto* c : currentScene->GetColliders())
             {
                 c->is_intersecting = false;
-                octree->insert(octree->root, c);
+                use_loose_octree ? octree->loose_insert(octree->root, c) : octree->insert(octree->root, c);
             }
 
-
-
             octree->check_collisions(octree->root);
-            //octree->render(octree->root, projection * view);
+            if (display_octree)
+            {
+                octree->render(octree->root, projection * view);
+            }
         }
 
 #pragma endregion
@@ -684,10 +708,18 @@ int main() {
         }
         if (ImGui::Checkbox("Use Octree", &use_octree)) {
         }
+        ImGui::SameLine();
+        if (ImGui::Checkbox("Loose Octree", &use_loose_octree)) {
+        }
+        if (ImGui::Checkbox("Display Octree", &display_octree)) {
+        }
         if (ImGui::Checkbox("Static Objects", &is_static)) {
         }
-        if (ImGui::Button("Add collider")) {
-            AddCollider(speeds,colliderShader);
+        ImGui::InputInt("Count", &dynamicallyAllocatedCollidersCount);
+
+        if (ImGui::Button("Add colliders")) {
+            int colliderCount = dynamicallyAllocatedCollidersCount;
+            AddColliders(speeds, colliderShader, colliderCount);
         }
 
         ImGui::End();

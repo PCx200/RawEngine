@@ -4,18 +4,18 @@
 
 #ifndef RAWENGINE_OCTREE_H
 #define RAWENGINE_OCTREE_H
+#include "CubeCollider.h"
 #include <vector>
 #include <glm/vec3.hpp>
-
-#include "CubeCollider.h"
 
 struct Node
 {
     glm::vec3 center;
     float half_width;
+    float loose_half_width;
     Node* child[8]{};
     std::vector<CubeCollider*> colliders;
-    CubeCollider* collider;
+    CubeCollider* collider = nullptr;
 };
 
 class Octree
@@ -29,6 +29,7 @@ public:
     void check_collisions(Node* node);
     void clear(Node* node);
     void insert(Node* node, CubeCollider* collider);
+    void loose_insert(Node* node, CubeCollider* collider);
 
     void render(Node* node, glm::mat4 view_proj);
 };

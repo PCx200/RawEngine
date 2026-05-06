@@ -15,6 +15,8 @@ bool CubeCollider::initialised = false;
 
 CubeCollider::CubeCollider(const Shader shader) : shader(shader)
 {
+    size = 1.0f;
+
     if (!initialised)
         init();
 }
@@ -22,6 +24,7 @@ CubeCollider::CubeCollider(const Shader shader) : shader(shader)
 CubeCollider::CubeCollider(glm::vec3 position, const Shader shader) : shader(shader)
 {
     transform.position = position;
+    size = 1.0f;
 
     if (!initialised)
         init();
@@ -31,6 +34,7 @@ CubeCollider::CubeCollider(glm::vec3 position, glm::vec3 rotation, const Shader 
 {
     transform.position = position;
     transform.rotation = rotation;
+    size = 1.0f;
 
     if (!initialised)
         init();
@@ -41,9 +45,9 @@ CubeCollider::CubeCollider(glm::vec3 position, glm::vec3 rotation, float size, c
     transform.position = position;
     transform.rotation = rotation;
 
-    transform.scale.x = size;
-    transform.scale.y = size;
-    transform.scale.z = size;
+    transform.scale = glm::vec3(size);
+    this->size = size;
+    is_intersecting = false;
 
     if (!initialised)
         init();

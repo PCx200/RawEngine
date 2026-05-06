@@ -16,6 +16,8 @@ Node* Octree::build(glm::vec3 center, float half_width, int max_depth, Shader sh
     Node* node = new Node;
     node->center = center;
     node->half_width = half_width;
+    node->loose_half_width = half_width * 2.0f;
+    node->collider = new CubeCollider(center, glm::vec3(0,0,0), half_width * 2, shader);
 
     glm::vec3 offset;
     float step = half_width * 0.5f;
@@ -26,7 +28,6 @@ Node* Octree::build(glm::vec3 center, float half_width, int max_depth, Shader sh
         offset.y = ((i & 2) ? step : -step);
         offset.z = ((i & 4) ? step : -step);
         node->child[i] = build(center + offset, step, max_depth - 1, shader);
-        node->collider = new CubeCollider(center, glm::vec3(0,0,0), half_width * 2, shader);
     }
 
     return node;
@@ -52,6 +53,38 @@ void Octree::insert(Node* node, CubeCollider* collider)
     }
 }
 
+void Octree::loose_insert(Node* node, CubeCollider* collider)
+{
+    glm::vec3 pos = collider->transform.position;
+
+    bool fits = true;
+    for (int i = 0; i < 3; i++)
+    {
+        float delta = pos[i] - node->center[i];
+        if (std::fabs(delta) > node->loose_half_width - collider->size * 0.5f)
+        {
+            fits = false;
+            break;
+        }
+    }
+
+    if (!fits)
+    {
+        node->colliders.push_back(collider);
+        return;
+    }
+
+    int index = 0;
+    for (int i = 0; i < 3; i++)
+        if (pos[i] > node->center[i])
+            index |= (1 << i);
+
+    if (node->child[index])
+        loose_insert(node->child[index], collider);
+    else
+        node->colliders.push_back(collider);
+}
+
 void Octree::check_collisions(Node* node)
 {
     for (size_t i = 0; i < node->colliders.size(); i++)
@@ -63,6 +96,40 @@ void Octree::check_collisions(Node* node)
                 node->colliders[i]->is_intersecting = true;
                 node->colliders[j]->is_intersecting = true;
             }
+        }
+    }
+
+    for (int c = 0; c < 8; c++)
+    {
+        Node* child = node->child[c];
+        if (!child) continue;
+
+        for (CubeCollider* a : node->colliders)
+            for (CubeCollider* b : child->colliders)
+                if (a->intersects(*b))
+                {
+                    a->is_intersecting = true;
+                    b->is_intersecting = true;
+                }
+    }
+
+    for (int a = 0; a < 8; a++)
+    {
+        Node* A = node->child[a];
+        if (!A) continue;
+
+        for (int b = a + 1; b < 8; b++)
+        {
+            Node* B = node->child[b];
+            if (!B) continue;
+
+            for (CubeCollider* ca : A->colliders)
+                for (CubeCollider* cb : B->colliders)
+                    if (ca->intersects(*cb))
+                    {
+                        ca->is_intersecting = true;
+                        cb->is_intersecting = true;
+                    }
         }
     }
 
