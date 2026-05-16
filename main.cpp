@@ -7,6 +7,7 @@
 #include <algorithm>
 #include <iostream>
 
+#include "Benchmark.h"
 #include "Camera.h"
 #include "CubeCollider.h"
 #include "GameObject.h"
@@ -52,50 +53,14 @@ Scene collision_detection_scene("Collision Detection Scene", &camera);
 //Camera camera1(70, g_width/g_height, 0.1f, 200.0f);
 GLFWcursor* cursor = glfwCreateStandardCursor(GLFW_ARROW_CURSOR);
 
+float octree_area = 75;
+
 std::vector<float> fps_history;
+std::vector<float> ms_history;
 bool is_recording = false;
 double start_time = 0.0f;
 
-void SaveFPSHistoryToCSV(const std::string& filename)
-{
-    std::ofstream file(filename);
-    if (!file.is_open())
-    {
-        printf("Failed to open %s\n", filename.c_str());
-        return;
-    }
-
-    file << "FPS,Cubes\n";
-
-    for (int i = 0; i < fps_history.size(); i++)
-    {
-        file << fps_history[i] << "," << sceneManager.getCurrentScene()->GetColliders().size() <<"\n";
-    }
-
-    file.close();
-    printf("Saved FPS history to %s\n", filename.c_str());
-}
-
-void StartFPSRecord()
-{
-    fps_history.clear();
-    start_time = glfwGetTime();
-    is_recording = true;
-}
-
-void UpdateFPSRecording(double record_duration, float deltaTime)
-{
-    if (!is_recording) return;
-
-    fps_history.push_back(1.0f / deltaTime);
-    double current_time = glfwGetTime();
-    if (current_time - start_time >= record_duration)
-    {
-        SaveFPSHistoryToCSV("fps_output.csv");
-
-        is_recording = false;
-    }
-}
+Benchmark benchmark;
 
 glm::vec3 GenerateRandomPosition(float region)
 {
@@ -106,11 +71,11 @@ glm::vec3 GenerateRandomPosition(float region)
     return {xPos, yPos, zPos};
 }
 
-void AddColliders(std::vector<glm::vec3> &speeds, Shader colliderShader, int count)
+void AddColliders(std::vector<glm::vec3> &speeds, Shader colliderShader, int count, float area)
 {
     for (int i = 0; i < count; i++)
     {
-        glm::vec3 pos = GenerateRandomPosition(50);
+        glm::vec3 pos = GenerateRandomPosition(area);
 
         float xRot = static_cast<float>(rand()) / RAND_MAX * 180.0f;
         float yRot = static_cast<float>(rand()) / RAND_MAX * 180.0f;
@@ -327,7 +292,7 @@ int main() {
 #pragma region Generate Cubes
 
     SEED = time(nullptr) ^ reinterpret_cast<uintptr_t>(&SEED);
-    srand(-316536522); //-316536522
+    srand(SEED); //-316536522
 
     printf("Seed: %i\n", SEED);
 
@@ -335,24 +300,7 @@ int main() {
     std::vector<glm::vec3> speeds;
 
 
-    for (int i = 0; i < cube_count; i++)
-    {
-        float xPos = static_cast<float>(rand()) / RAND_MAX * 50.0f - 25.0f;
-        float yPos = static_cast<float>(rand()) / RAND_MAX * 25.0f - 12.5f;
-        float zPos = static_cast<float>(rand()) / RAND_MAX * 50.0f - 25.0f;
-
-        float xRot = static_cast<float>(rand()) / RAND_MAX * 180.0f;
-        float yRot = static_cast<float>(rand()) / RAND_MAX * 180.0f;
-        float zRot = static_cast<float>(rand()) / RAND_MAX * 180.0f;
-
-        float size = static_cast<float>(rand()) / RAND_MAX * 2.0f + 1.0f;
-
-        auto* collider = new CubeCollider(glm::vec3(xPos, yPos, zPos), glm::vec3(xRot,yRot,zRot), size, colliderShader);
-        collision_detection_scene.AddCollider(collider);
-
-        float speed = static_cast<float>(rand()) / RAND_MAX * 2.0f - 1.0f;
-        speeds.emplace_back(speed);
-    }
+    AddColliders(speeds, colliderShader, cube_count, octree_area);
 #pragma endregion
 
 #pragma region Framebuffers
@@ -478,8 +426,11 @@ int main() {
     bool use_loose_octree = false;
     bool is_static = true;
 
+    int naive_checks = 0;
+    int naive_collisions = 0;
+
     int dynamicallyAllocatedCollidersCount = 0;
-    Octree* octree = new Octree(glm::vec3(0.0f,0.0f,0.0f), 30, 3, colliderShader);
+    auto* octree = new Octree(glm::vec3(0.0f,0.0f,0.0f), octree_area * 0.5f, 3, colliderShader);
 
     for (auto collider : sceneManager.getCurrentScene()->GetColliders())
     {
@@ -495,21 +446,21 @@ int main() {
 
         glfwSwapInterval(0); //VSYNC 1=on 0=off
 
-        UpdateFPSRecording(10, deltaTime);
+        benchmark.update(deltaTime, sceneManager.getCurrentScene()->GetColliders().size());
 
-        if (useEdgeDetection) {
-            glBindFramebuffer(GL_FRAMEBUFFER, framebuffer);
-        }
-        else if (useInvertColors) {
-            glBindFramebuffer(GL_FRAMEBUFFER, ciframebuffer);
-        }
-        else if (usePixelation)
-        {
-            glBindFramebuffer(GL_FRAMEBUFFER, pixelationFramebuffer);
-        }
-        else {
-            glBindFramebuffer(GL_FRAMEBUFFER, 0);
-        }
+        // if (useEdgeDetection) {
+        //     glBindFramebuffer(GL_FRAMEBUFFER, framebuffer);
+        // }
+        // else if (useInvertColors) {
+        //     glBindFramebuffer(GL_FRAMEBUFFER, ciframebuffer);
+        // }
+        // else if (usePixelation)
+        // {
+        //     glBindFramebuffer(GL_FRAMEBUFFER, pixelationFramebuffer);
+        // }
+        // else {
+        //     glBindFramebuffer(GL_FRAMEBUFFER, 0);
+        // }
 
         glEnable(GL_DEPTH_TEST);
         glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
@@ -527,57 +478,68 @@ int main() {
 
         // suzanne1.transform.Rotate(glm::vec3(0,1,0), 360 * deltaTime);
 
-        // for (int i = 0; i < currentScene->GetColliders().size(); i++)
-        // {
-        //     if (currentScene->GetColliders()[i]->is_static == is_static) continue;
-        //
-        //     currentScene->GetColliders()[i]->transform.Translate(speeds[i] * deltaTime);
-        //     //currentScene->GetColliders()[i]->transform.Rotate(glm::vec3(0,1,0), 100 * speeds[i].y * deltaTime);
-        // }
+        for (int i = 0; i < currentScene->GetColliders().size(); i++)
+        {
+            if (currentScene->GetColliders()[i]->is_static == is_static) continue;
+
+            //currentScene->GetColliders()[i]->transform.Translate(speeds[i] * deltaTime);
+            auto time = glfwGetTime();
+            currentScene->GetColliders()[i]->transform.Translate(glm::vec3(std::sin(time)) * speeds[i] * deltaTime);
+
+            //currentScene->GetColliders()[i]->transform.Rotate(glm::vec3(0,1,0), 100 * speeds[i].y * deltaTime);
+        }
 
 
         //VP
         glm::mat4 view = camera.getViewMatrix();
         glm::mat4 projection = camera.getProjectionMatrix();
 
-        litShader.Use();
-
-        litShader.setFloat("ambientIntensity", ambientIntensity);
-        litShader.setVec4("lightColor", lightColor);
-
-        litShader.setInt("lightCount", currentScene->GetLightCount());
-
-        for (int i = 0; i < currentScene->GetLightCount(); i++)
-        {
-            litShader.setVec3("lights[" + std::to_string(i) + "].position", currentScene->GetLights()[i]->transform.position);
-            litShader.setVec4("lights[" + std::to_string(i) + "].color", currentScene->GetLights()[i]->getColor());
-            litShader.setFloat("lights[" + std::to_string(i) + "].radius",currentScene->GetLights()[i]->radius);
-        }
-        litShader.setVec3("ambientColor", ambientColor);
-        litShader.setVec3("diffuseColor", diffuseColor);
-        litShader.setVec3("speculaColor", specularColor);
-        litShader.setFloat("specularIntensity", specularPower);
-
-        glUniform3f(cameraPosUniform, camera.transform.position.x, camera.transform.position.y, camera.transform.position.z);
-
-        litShader.setVec3("material.ambient", materialAmbient);
-        litShader.setVec3("material.diffuse", materialDiffuse);
-        litShader.setVec3("material.specular", materialSpecular);
+#pragma region Lighting
+        // litShader.Use();
+        //
+        // litShader.setFloat("ambientIntensity", ambientIntensity);
+        // litShader.setVec4("lightColor", lightColor);
+        //
+        // litShader.setInt("lightCount", currentScene->GetLightCount());
+        //
+        // for (int i = 0; i < currentScene->GetLightCount(); i++)
+        // {
+        //     litShader.setVec3("lights[" + std::to_string(i) + "].position", currentScene->GetLights()[i]->transform.position);
+        //     litShader.setVec4("lights[" + std::to_string(i) + "].color", currentScene->GetLights()[i]->getColor());
+        //     litShader.setFloat("lights[" + std::to_string(i) + "].radius",currentScene->GetLights()[i]->radius);
+        // }
+        // litShader.setVec3("ambientColor", ambientColor);
+        // litShader.setVec3("diffuseColor", diffuseColor);
+        // litShader.setVec3("speculaColor", specularColor);
+        // litShader.setFloat("specularIntensity", specularPower);
+        //
+        // glUniform3f(cameraPosUniform, camera.transform.position.x, camera.transform.position.y, camera.transform.position.z);
+        //
+        // litShader.setVec3("material.ambient", materialAmbient);
+        // litShader.setVec3("material.diffuse", materialDiffuse);
+        // litShader.setVec3("material.specular", materialSpecular);
+#pragma endregion
 
 #pragma region Collisions
 
         //Naive Collision Detection
         if (use_collision && !use_octree)
         {
+            naive_checks = 0;
+            naive_collisions = 0;
+
             for (auto* c : currentScene->GetColliders())
                 c->is_intersecting = false;
 
             for (int i = 0; i < currentScene->GetColliders().size(); i++)
             {
+
                 for (int j = i + 1; j < currentScene->GetColliders().size(); j++)
                 {
+                    naive_checks++;
                     if (currentScene->GetColliders()[i]->intersects(*currentScene->GetColliders()[j]))
                     {
+                        naive_collisions++;
                         currentScene->GetColliders()[i]->is_intersecting = true;
                         currentScene->GetColliders()[j]->is_intersecting = true;
                     }
@@ -588,6 +550,9 @@ int main() {
         //Octree Collision Detection
         if (use_collision && use_octree)
         {
+            octree->octree_checks = 0;
+            octree->octree_collisions = 0;
+
             octree->clear(octree->root);
 
             for (auto* c : currentScene->GetColliders())
@@ -607,36 +572,38 @@ int main() {
 
         currentScene->Render();
 
-        glBindFramebuffer(GL_FRAMEBUFFER, 0);
-        if (useEdgeDetection) {
-            glDisable(GL_DEPTH_TEST);
-            glClear(GL_COLOR_BUFFER_BIT);
-            edgeDetectionShader.Use();
-            edgeDetectionShader.setFloat("thickness", thickness);
-            edgeDetectionShader.setFloat("clarity", clarity);
-            glActiveTexture(GL_TEXTURE0);
-            glBindTexture(GL_TEXTURE_2D, texture);
-            edgeDetectionQuad.Render(glm::mat4(1.0f));
-        }
-        else if (useInvertColors) {
-            glDisable(GL_DEPTH_TEST);
-            glClear(GL_COLOR_BUFFER_BIT);
-            colorInversionShader.Use();
-            glActiveTexture(GL_TEXTURE0);
-            glBindTexture(GL_TEXTURE_2D, citexture);
-            colorInversionQuad.Render(glm::mat4(1.0f));
-        }
-        else if (usePixelation)
-        {
-            glDisable(GL_DEPTH_TEST);
-            glClear(GL_COLOR_BUFFER_BIT);
-            pixelationShader.Use();
-            pixelationShader.setFloat("pixelSize", pixelSize);
-            pixelationShader.setVec2("screenSize", glm::vec2(static_cast<float>(g_width), static_cast<float>(g_height)));
-            glActiveTexture(GL_TEXTURE0);
-            glBindTexture(GL_TEXTURE_2D, pixelationTexture);
-            pixelationQuad.Render(glm::mat4(1.0f));
-        }
+#pragma region Post-Processing
+        // glBindFramebuffer(GL_FRAMEBUFFER, 0);
+        // if (useEdgeDetection) {
+        //     glDisable(GL_DEPTH_TEST);
+        //     glClear(GL_COLOR_BUFFER_BIT);
+        //     edgeDetectionShader.Use();
+        //     edgeDetectionShader.setFloat("thickness", thickness);
+        //     edgeDetectionShader.setFloat("clarity", clarity);
+        //     glActiveTexture(GL_TEXTURE0);
+        //     glBindTexture(GL_TEXTURE_2D, texture);
+        //     edgeDetectionQuad.Render(glm::mat4(1.0f));
+        // }
+        // else if (useInvertColors) {
+        //     glDisable(GL_DEPTH_TEST);
+        //     glClear(GL_COLOR_BUFFER_BIT);
+        //     colorInversionShader.Use();
+        //     glActiveTexture(GL_TEXTURE0);
+        //     glBindTexture(GL_TEXTURE_2D, citexture);
+        //     colorInversionQuad.Render(glm::mat4(1.0f));
+        // }
+        // else if (usePixelation)
+        // {
+        //     glDisable(GL_DEPTH_TEST);
+        //     glClear(GL_COLOR_BUFFER_BIT);
+        //     pixelationShader.Use();
+        //     pixelationShader.setFloat("pixelSize", pixelSize);
+        //     pixelationShader.setVec2("screenSize", glm::vec2(static_cast<float>(g_width), static_cast<float>(g_height)));
+        //     glActiveTexture(GL_TEXTURE0);
+        //     glBindTexture(GL_TEXTURE_2D, pixelationTexture);
+        //     pixelationQuad.Render(glm::mat4(1.0f));
+        // }
+#pragma endregion
 
         if (showWireframe)
         {
@@ -697,12 +664,16 @@ int main() {
         ImGui::Text("FPS: %.1f", 1.0f / deltaTime);
         ImGui::Text("Milliseconds per frame: %.3f", 1000.0f * deltaTime);
         ImGui::Text("Milliseconds: %.4f", deltaTime);
+        ImGui::Text("Naive Checks: %lld", naive_checks);
+        ImGui::Text("Naive Collisions: %lld", naive_collisions);
+        ImGui::Text("Octree Checks: %lld", octree->octree_checks);
+        ImGui::Text("Octree Collisions: %lld", octree->octree_collisions);
         ImGui::Text("Cube Count: %i", currentScene->GetColliders().size());
         ImGui::End();
 
         ImGui::Begin("Tests");
         if (ImGui::Button("FPS Test")) {
-            StartFPSRecord();
+            benchmark.start(1000);
         };
         if (ImGui::Checkbox("Use Collision", &use_collision)) {
         }
@@ -719,7 +690,7 @@ int main() {
 
         if (ImGui::Button("Add colliders")) {
             int colliderCount = dynamicallyAllocatedCollidersCount;
-            AddColliders(speeds, colliderShader, colliderCount);
+            AddColliders(speeds, colliderShader, colliderCount, octree_area);
         }
 
         ImGui::End();

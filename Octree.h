@@ -21,6 +21,8 @@ struct Node
 class Octree
 {
 public:
+    int octree_checks;
+    int octree_collisions;
     Node* root;
 
     Octree(glm::vec3 center, float half_width, int max_depth, Shader shader);
@@ -32,6 +34,9 @@ public:
     void loose_insert(Node* node, CubeCollider* collider);
 
     void render(Node* node, glm::mat4 view_proj);
+
+private:
+
 };
 
 

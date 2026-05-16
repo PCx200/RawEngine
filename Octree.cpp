@@ -40,7 +40,7 @@ void Octree::insert(Node* node, CubeCollider* collider)
 
     for (int i = 0; i < 3; i++) {
         float delta = collider->transform.position[i] - node->center[i];
-        if (fabs(delta) < node->half_width + collider->size) {
+        if (std::fabs(delta) + collider->size * 0.5f > node->half_width) {
             straddle = true;
             break;
         }
@@ -91,8 +91,10 @@ void Octree::check_collisions(Node* node)
     {
         for (size_t j = i + 1; j < node->colliders.size(); j++)
         {
+            octree_checks++;
             if (node->colliders[i]->intersects(*node->colliders[j]))
             {
+                octree_collisions++;
                 node->colliders[i]->is_intersecting = true;
                 node->colliders[j]->is_intersecting = true;
             }
@@ -106,11 +108,15 @@ void Octree::check_collisions(Node* node)
 
         for (CubeCollider* a : node->colliders)
             for (CubeCollider* b : child->colliders)
+            {
+                octree_checks++;
                 if (a->intersects(*b))
                 {
+                    octree_collisions++;
                     a->is_intersecting = true;
                     b->is_intersecting = true;
                 }
+            }
     }
 
     for (int a = 0; a < 8; a++)
@@ -125,11 +131,15 @@ void Octree::check_collisions(Node* node)
 
             for (CubeCollider* ca : A->colliders)
                 for (CubeCollider* cb : B->colliders)
+                {
+                    octree_checks++;
                     if (ca->intersects(*cb))
                     {
+                        octree_collisions++;
                         ca->is_intersecting = true;
                         cb->is_intersecting = true;
                     }
+                }
         }
     }
 
