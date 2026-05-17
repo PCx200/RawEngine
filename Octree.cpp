@@ -35,12 +35,20 @@ Node* Octree::build(glm::vec3 center, float half_width, int max_depth, Shader sh
 
 void Octree::insert(Node* node, CubeCollider* collider)
 {
+    OBB obb = collider->get_OBB();
+
     int index = 0;
     bool straddle = false;
 
     for (int i = 0; i < 3; i++) {
-        float delta = collider->transform.position[i] - node->center[i];
-        if (std::fabs(delta) + collider->size * 0.5f > node->half_width) {
+        float delta = obb.center[i] - node->center[i];
+
+        float projectedRadius =
+            fabs(obb.axes[0][i]) * obb.halfSize.x +
+            fabs(obb.axes[1][i]) * obb.halfSize.y +
+            fabs(obb.axes[2][i]) * obb.halfSize.z;
+
+        if (std::fabs(delta) < projectedRadius) {
             straddle = true;
             break;
         }
@@ -55,17 +63,28 @@ void Octree::insert(Node* node, CubeCollider* collider)
 
 void Octree::loose_insert(Node* node, CubeCollider* collider)
 {
+    OBB obb = collider->get_OBB();
+
     glm::vec3 pos = collider->transform.position;
 
+    int index = 0;
     bool fits = true;
     for (int i = 0; i < 3; i++)
     {
         float delta = pos[i] - node->center[i];
-        if (std::fabs(delta) > node->loose_half_width - collider->size * 0.5f)
+
+        float projectedRadius =
+                fabs(obb.axes[0][i]) * obb.halfSize.x +
+                fabs(obb.axes[1][i]) * obb.halfSize.y +
+                fabs(obb.axes[2][i]) * obb.halfSize.z;
+
+        if (fabs(delta) > node->loose_half_width - projectedRadius)
         {
             fits = false;
             break;
         }
+        if (pos[i] > node->center[i])
+            index |= (1 << i);
     }
 
     if (!fits)
@@ -73,11 +92,6 @@ void Octree::loose_insert(Node* node, CubeCollider* collider)
         node->colliders.push_back(collider);
         return;
     }
-
-    int index = 0;
-    for (int i = 0; i < 3; i++)
-        if (pos[i] > node->center[i])
-            index |= (1 << i);
 
     if (node->child[index])
         loose_insert(node->child[index], collider);

@@ -444,9 +444,13 @@ int main() {
     while (!glfwWindowShouldClose(window)) {
         processInput(window);
 
-        glfwSwapInterval(0); //VSYNC 1=on 0=off
+        finishFrameTime = glfwGetTime();
+        deltaTime = static_cast<float>(finishFrameTime - currentTime);
+        currentTime = finishFrameTime;
 
-        benchmark.update(deltaTime, sceneManager.getCurrentScene()->GetColliders().size());
+        benchmark.update(deltaTime, sceneManager.getCurrentScene()->GetColliders().size(), use_octree ? octree->octree_checks : naive_checks);
+
+        glfwSwapInterval(0); //VSYNC 1=on 0=off
 
         // if (useEdgeDetection) {
         //     glBindFramebuffer(GL_FRAMEBUFFER, framebuffer);
@@ -673,7 +677,19 @@ int main() {
 
         ImGui::Begin("Tests");
         if (ImGui::Button("FPS Test")) {
-            benchmark.start(1000);
+            if (use_collision && !use_octree)
+            {
+                benchmark.start(1000, "Naive Collision Detection");
+            }
+            else if (use_collision && use_octree)
+            {
+                benchmark.start(1000, "Octree Collision Detection");
+            }
+            else if (use_collision && use_octree && use_loose_octree)
+            {
+                benchmark.start(1000, "Loose Octree Collision Detection");
+            }
+
         };
         if (ImGui::Checkbox("Use Collision", &use_collision)) {
         }
@@ -748,9 +764,6 @@ int main() {
 
         glfwSwapBuffers(window);
         glfwPollEvents();
-        finishFrameTime = glfwGetTime();
-        deltaTime = static_cast<float>(finishFrameTime - currentTime);
-        currentTime = finishFrameTime;
     }
 
     glDeleteProgram(modelShader.ID);
